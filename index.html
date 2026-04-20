@@ -2,52 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.04 - High-Vis Deck</title>
+    <title>CRi2 / MARIAH v1.05 - Sequencer Alpha</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; }
         
-        #ui-layer { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; padding: 30px; box-sizing: border-box;
-        }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 30px; box-sizing: border-box; }
+        #dashboard { font-size: 18px; background: rgba(0, 20, 0, 0.6); display: inline-block; padding: 15px; border-radius: 8px; border: 1px solid #040; text-shadow: 2px 2px #000; }
 
-        #dashboard { 
-            font-size: 18px; 
-            background: rgba(0, 20, 0, 0.5); 
-            display: inline-block; 
-            padding: 15px; 
-            border-radius: 8px;
-            border: 1px solid #040;
-            text-shadow: 2px 2px #000; 
-        }
-
-        /* BIG BUTTON CONSOLE */
-        #controls { 
-            position: absolute; bottom: 60px; left: 50%; 
-            transform: translateX(-50%); display: flex; gap: 30px; pointer-events: auto;
-        }
+        /* THE CONSOLE */
+        #controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 20px; pointer-events: auto; align-items: center;}
+        .row { display: flex; gap: 20px; }
 
         .btn {
             background: #111; border: 3px solid #444; color: #888;
-            padding: 25px 45px; cursor: pointer; transition: 0.2s;
-            text-transform: uppercase; 
-            font-weight: 900; 
-            font-size: 24px; /* Doubled size */
-            font-family: 'Courier New', monospace;
-            border-radius: 12px;
+            padding: 20px 35px; cursor: pointer; transition: 0.1s;
+            text-transform: uppercase; font-weight: 900; font-size: 20px;
+            font-family: 'Courier New', monospace; border-radius: 12px;
         }
 
-        .btn.active { 
-            border-color: #0f0; 
-            color: #0f0; 
-            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4); 
-            background: #020;
-        }
-        
+        .btn.active { border-color: #0f0; color: #0f0; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); background: #020; }
+        .btn.rec { border-color: #f00; color: #f00; }
+        .btn.rec.active { background: #300; box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
         .btn:hover { background: #333; color: #fff; }
-
-        #modeDisplay { font-weight: bold; font-size: 22px; }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -84,14 +61,21 @@
     <div id="ui-layer">
         <div id="dashboard">
             REGISTER: <span id="hexDisplay">0x000000</span><br>
-            MODE:     <span id="modeDisplay">LIGHT_MODE</span><br>
-            PSI:      <span id="psiDisplay">14.7</span>
+            STEP:     <span id="stepDisplay">00/64</span><br>
+            MODE:     <span id="modeDisplay">LIGHT</span>
         </div>
 
         <div id="controls">
-            <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
-            <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
-            <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
+            <div class="row">
+                <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
+                <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
+                <button id="btnFae" class="btn" onclick="toggleMod('fae')">FAE</button>
+            </div>
+            <div class="row">
+                <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
+                <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
+                <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
+            </div>
         </div>
     </div>
 
@@ -101,11 +85,11 @@
         const canvas = document.getElementById('vortexCanvas');
         const gl = canvas.getContext('webgl');
         
+        // Shader Boilerplate
         function createShader(gl, type, source) {
             const s = gl.createShader(type);
             gl.shaderSource(s, source); gl.compileShader(s); return s;
         }
-
         const program = gl.createProgram();
         gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
         gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
@@ -117,78 +101,86 @@
         const posLoc = gl.getAttribLocation(program, "a_position");
         gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-        const utimeLoc = gl.getUniformLocation(program, "u_time");
-        const uresLoc = gl.getUniformLocation(program, "u_resolution");
-        const ufaeLoc = gl.getUniformLocation(program, "u_faemode");
-        const upresLoc = gl.getUniformLocation(program, "u_pressure");
-        const uwindLoc = gl.getUniformLocation(program, "u_wind");
-        const uringLoc = gl.getUniformLocation(program, "u_ring");
+        const uniforms = {
+            time: gl.getUniformLocation(program, "u_time"),
+            res: gl.getUniformLocation(program, "u_resolution"),
+            fae: gl.getUniformLocation(program, "u_faemode"),
+            pres: gl.getUniformLocation(program, "u_pressure"),
+            wind: gl.getUniformLocation(program, "u_wind"),
+            ring: gl.getUniformLocation(program, "u_ring")
+        };
 
+        // Audio Boilerplate
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let osc = null, gain = null, ringOsc = null, ringGain = null;
 
         function initAudio() {
             if (osc) return;
-            osc = audioCtx.createOscillator();
-            gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            osc.start();
-
-            ringOsc = audioCtx.createOscillator();
-            ringGain = audioCtx.createGain();
-            ringOsc.type = 'sine';
-            ringOsc.frequency.setValueAtTime(40, audioCtx.currentTime); 
-            ringGain.gain.setValueAtTime(0, audioCtx.currentTime);
-            ringOsc.connect(ringGain.gain);
-            ringOsc.start();
+            osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+            osc.type = 'sawtooth'; osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime); osc.start();
+            ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
+            ringOsc.type = 'sine'; ringOsc.frequency.setValueAtTime(40, audioCtx.currentTime); 
+            ringGain.gain.setValueAtTime(0, audioCtx.currentTime); ringOsc.connect(ringGain.gain); ringOsc.start();
         }
 
-        let mods = { wind: false, spring: false, ring: false };
+        // Logic State
+        let mods = { wind: false, spring: false, ring: false, fae: false };
+        let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
+        let liveInput = { angle: 0, pressure: 0 };
+
         function toggleMod(m) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            initAudio();
             mods[m] = !mods[m];
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active');
-            
             if (m === 'ring' && osc) {
-                if (mods.ring) {
-                    osc.disconnect(gain); osc.connect(ringGain); ringGain.connect(gain);
-                } else {
-                    osc.disconnect(ringGain); ringGain.disconnect(gain); osc.connect(gain);
-                }
+                if (mods.ring) { osc.disconnect(gain); osc.connect(ringGain); ringGain.connect(gain); }
+                else { osc.disconnect(ringGain); ringGain.disconnect(gain); osc.connect(gain); }
             }
         }
 
-        let state = { faeMode: 0, pressure: 0.0 };
+        function toggleSeq(mode) {
+            if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; }
+            if (mode === 'play') seq.play = !seq.play;
+            document.getElementById('btnRec').classList.toggle('active', seq.rec);
+            document.getElementById('btnPlay').classList.toggle('active', seq.play);
+        }
 
         window.addEventListener('mousemove', (e) => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             initAudio();
-
-            state.pressure = e.clientY / window.innerHeight;
-            let angle = (e.clientX / window.innerWidth) * 360;
-            state.faeMode = (angle >= 270) ? 1 : 0;
-
-            let freq = (mods.spring) ? 40 + (angle * 5) : 40 + (angle * 1.8);
-            osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
-            gain.gain.setTargetAtTime((1.0 - state.pressure) * 0.2, audioCtx.currentTime, 0.05);
-
-            document.getElementById('hexDisplay').innerText = `0x${Math.floor(angle).toString(16).toUpperCase()}${Math.floor(state.pressure * 255).toString(16).toUpperCase()}FF`;
-            document.getElementById('modeDisplay').innerText = state.faeMode ? "FAE_MODE" : "LIGHT_MODE";
-            document.getElementById('modeDisplay').style.color = state.faeMode ? "#0ff" : "#f31";
-            document.getElementById('psiDisplay').innerText = (14.7 + (state.pressure * 10)).toFixed(1);
+            liveInput.pressure = e.clientY / window.innerHeight;
+            liveInput.angle = (e.clientX / window.innerWidth) * 360;
         });
+
+        // The Engine Heartbeat
+        setInterval(() => {
+            if (seq.rec || seq.play) {
+                if (seq.rec) {
+                    seq.data[seq.step] = { a: liveInput.angle, p: liveInput.pressure };
+                }
+                
+                let current = (seq.play && seq.data[seq.step]) ? seq.data[seq.step] : liveInput;
+                
+                // Update Sound & Visuals from the Buffer (or Live)
+                let freq = (mods.spring) ? 40 + (current.a * 5) : 40 + (current.a * 1.8);
+                if (osc) osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.02);
+                if (gain) gain.gain.setTargetAtTime((1.0 - current.p) * 0.2, audioCtx.currentTime, 0.02);
+
+                document.getElementById('hexDisplay').innerText = `0x${Math.floor(current.a).toString(16).toUpperCase()}${Math.floor(current.p * 255).toString(16).toUpperCase()}FF`;
+                document.getElementById('stepDisplay').innerText = `${String(seq.step).padStart(2, '0')}/64`;
+                
+                seq.step = (seq.step + 1) % 64;
+            }
+        }, 50); // ~20 steps per second
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
-            gl.uniform1f(utimeLoc, time * 0.001);
-            gl.uniform2f(uresLoc, canvas.width, canvas.height);
-            gl.uniform1i(ufaeLoc, state.faeMode);
-            gl.uniform1f(upresLoc, state.pressure);
-            gl.uniform1i(uwindLoc, mods.wind ? 1 : 0);
-            gl.uniform1i(uringLoc, mods.ring ? 1 : 0);
+            gl.uniform1f(uniforms.time, time * 0.001);
+            gl.uniform2f(uniforms.res, canvas.width, canvas.height);
+            gl.uniform1i(uniforms.fae, mods.fae ? 1 : 0);
+            gl.uniform1f(uniforms.pres, liveInput.pressure); // Visuals track live or seq depending on play state
+            gl.uniform1i(uniforms.wind, mods.wind ? 1 : 0);
+            gl.uniform1i(uniforms.ring, mods.ring ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             requestAnimationFrame(render);
         }
