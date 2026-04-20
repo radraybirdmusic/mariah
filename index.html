@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.02 - The Vortex</title>
+    <title>CRi2 / MARIAH v1.03 - Control Deck</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; }
-        #ui { 
-            position: absolute; top: 20px; left: 20px; color: #0f0; 
-            pointer-events: none; text-shadow: 2px 2px #000;
-            line-height: 1.5;
+        
+        #ui-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; padding: 20px; box-sizing: border-box;
         }
-        .label { color: #555; }
+
+        #dashboard { margin-bottom: 20px; text-shadow: 2px 2px #000; }
+
+        /* The Button Console */
+        #controls { 
+            position: absolute; bottom: 40px; left: 50%; 
+            transform: translateX(-50%); display: flex; gap: 20px; pointer-events: auto;
+        }
+
+        .btn {
+            background: #111; border: 2px solid #444; color: #444;
+            padding: 15px 25px; cursor: pointer; transition: 0.2s;
+            text-transform: uppercase; font-weight: bold; font-size: 12px;
+        }
+
+        .btn.active { border-color: #0f0; color: #0f0; box-shadow: 0 0 10px #0f0; }
+        .btn:hover { background: #222; }
+
+        #modeDisplay { font-weight: bold; }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -25,96 +43,119 @@
         uniform vec2 u_resolution;
         uniform int u_faemode;
         uniform float u_pressure;
+        uniform int u_wind;
+        uniform int u_ring;
 
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
-            // The Worm Wiggle Metabolism
-            float wiggle = sin(uv.y * (8.0 + u_pressure * 12.0) + u_time * 2.0) * 0.04;
-            float line = smoothstep(0.015, 0.0, abs(uv.x - 0.5 + wiggle));
-
-            // Flamin' Hot Red vs FAE Cyan
-            vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
             
+            // SPRING/WIND Impact on Wiggle
+            float windFactor = (u_wind == 1) ? sin(u_time * 5.0) * 0.05 : 0.0;
+            float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + windFactor);
+            
+            float line = smoothstep(0.02, 0.0, abs(uv.x - 0.5 + wiggle));
+            
+            // RING MOD Visual Interference
+            if(u_ring == 1) {
+                line *= step(0.5, fract(uv.y * 50.0 + u_time * 10.0));
+            }
+
+            vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
             gl_FragColor = vec4(color * line, line);
         }
     </script>
 </head>
 <body>
 
-    <div id="ui">
-        <span class="label">REGISTER:</span> <span id="hexDisplay">0x000000</span><br>
-        <span class="label">MODE:</span> <span id="modeDisplay">LIGHT_MODE</span><br>
-        <span class="label">PSI:</span> <span id="psiDisplay">14.7</span>
+    <div id="ui-layer">
+        <div id="dashboard">
+            REGISTER: <span id="hexDisplay">0x000000</span><br>
+            MODE: <span id="modeDisplay">LIGHT_MODE</span><br>
+            PSI: <span id="psiDisplay">14.7</span>
+        </div>
+
+        <div id="controls">
+            <button id="btnWind" class="btn" onclick="toggleMod('wind')">Wind</button>
+            <button id="btnSpring" class="btn" onclick="toggleMod('spring')">Spring</button>
+            <button id="btnRing" class="btn" onclick="toggleMod('ring')">Ring</button>
+        </div>
     </div>
 
     <canvas id="vortexCanvas"></canvas>
 
     <script>
-        // --- 1. INITIALIZE WEBGL ---
         const canvas = document.getElementById('vortexCanvas');
         const gl = canvas.getContext('webgl');
-        const hexDisplay = document.getElementById('hexDisplay');
-        const modeDisplay = document.getElementById('modeDisplay');
-        const psiDisplay = document.getElementById('psiDisplay');
-
+        
+        // --- SHADER SETUP ---
         function createShader(gl, type, source) {
-            const shader = gl.createShader(type);
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-            return shader;
+            const s = gl.createShader(type);
+            gl.shaderSource(s, source); gl.compileShader(s); return s;
         }
 
-        const vsSource = document.getElementById('vs').text;
-        const fsSource = document.getElementById('fs').text;
         const program = gl.createProgram();
-        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
-        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
-        gl.linkProgram(program);
-        gl.useProgram(program);
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
+        gl.linkProgram(program); gl.useProgram(program);
 
         const buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
         const posLoc = gl.getAttribLocation(program, "a_position");
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
         const utimeLoc = gl.getUniformLocation(program, "u_time");
         const uresLoc = gl.getUniformLocation(program, "u_resolution");
         const ufaeLoc = gl.getUniformLocation(program, "u_faemode");
         const upresLoc = gl.getUniformLocation(program, "u_pressure");
+        const uwindLoc = gl.getUniformLocation(program, "u_wind");
+        const uringLoc = gl.getUniformLocation(program, "u_ring");
 
-        // --- 2. INITIALIZE AUDIO (The Thrum) ---
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContext();
-        let oscillator = null;
-        let gainNode = null;
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = null, gain = null, ringOsc = null, ringGain = null;
 
         function initAudio() {
-            if (oscillator) return;
-            oscillator = audioCtx.createOscillator();
-            gainNode = audioCtx.createGain();
-            oscillator.type = 'sawtooth'; 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            oscillator.start();
+            if (osc) return;
+            osc = audioCtx.createOscillator();
+            gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            osc.start();
+
+            // Ring Mod Carrier
+            ringOsc = audioCtx.createOscillator();
+            ringGain = audioCtx.createGain();
+            ringOsc.type = 'sine';
+            ringOsc.frequency.setValueAtTime(30, audioCtx.currentTime); 
+            ringGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            ringOsc.connect(ringGain.gain); // The "Ring" connection
+            ringOsc.start();
         }
 
-        function playBloop() {
-            const bOsc = audioCtx.createOscillator();
-            const bGain = audioCtx.createGain();
-            bOsc.type = 'sine';
-            bOsc.frequency.setValueAtTime(880, audioCtx.currentTime);
-            bOsc.connect(bGain);
-            bGain.connect(audioCtx.destination);
-            bGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            bGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            bOsc.start(); bOsc.stop(audioCtx.currentTime + 0.1);
+        // --- MOD TOGGLES ---
+        let mods = { wind: false, spring: false, ring: false };
+        function toggleMod(m) {
+            mods[m] = !mods[m];
+            document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active');
+            
+            if (m === 'ring' && osc) {
+                // Connect/Disconnect Ring Mod logic
+                if (mods.ring) {
+                    osc.disconnect(gain);
+                    osc.connect(ringGain);
+                    ringGain.connect(gain);
+                } else {
+                    osc.disconnect(ringGain);
+                    ringGain.disconnect(gain);
+                    osc.connect(gain);
+                }
+            }
         }
 
-        // --- 3. THE ZING (Input) ---
-        let state = { faeMode: 0, pressure: 0.0, currentHex: "0x000000" };
+        // --- INPUT & RENDER ---
+        let state = { faeMode: 0, pressure: 0.0 };
 
         window.addEventListener('mousemove', (e) => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -122,32 +163,27 @@
 
             state.pressure = e.clientY / window.innerHeight;
             let angle = (e.clientX / window.innerWidth) * 360;
-
-            // Update Audio Pitch & Volume
-            let freq = 55 + (angle * 1.5); // Low A up to grit
-            oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
-            gainNode.gain.setTargetAtTime((1.0 - state.pressure) * 0.15, audioCtx.currentTime, 0.05);
-
-            // Shamanic Flip (270 Degrees)
             state.faeMode = (angle >= 270) ? 1 : 0;
-            modeDisplay.innerText = state.faeMode ? "FAE_MODE" : "LIGHT_MODE";
-            modeDisplay.style.color = state.faeMode ? "#0ff" : "#f31";
 
-            // Update UI
-            state.currentHex = `0x${Math.floor(angle).toString(16).toUpperCase()}${Math.floor(state.pressure * 255).toString(16).toUpperCase()}FF`;
-            hexDisplay.innerText = state.currentHex;
-            psiDisplay.innerText = (14.7 + (state.pressure * 10)).toFixed(1);
+            // Audio Modulation
+            let freq = (mods.spring) ? 55 + (angle * 4) : 55 + (angle * 1.5);
+            osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+            gain.gain.setTargetAtTime((1.0 - state.pressure) * 0.15, audioCtx.currentTime, 0.05);
+
+            document.getElementById('hexDisplay').innerText = `0x${Math.floor(angle).toString(16).toUpperCase()}${Math.floor(state.pressure * 255).toString(16).toUpperCase()}FF`;
+            document.getElementById('modeDisplay').innerText = state.faeMode ? "FAE_MODE" : "LIGHT_MODE";
+            document.getElementById('modeDisplay').style.color = state.faeMode ? "#0ff" : "#f31";
+            document.getElementById('psiDisplay').innerText = (14.7 + (state.pressure * 10)).toFixed(1);
         });
 
-        window.addEventListener('mousedown', () => { playBloop(); });
-
-        // --- 4. THE LOOP ---
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
             gl.uniform1f(utimeLoc, time * 0.001);
             gl.uniform2f(uresLoc, canvas.width, canvas.height);
             gl.uniform1i(ufaeLoc, state.faeMode);
             gl.uniform1f(upresLoc, state.pressure);
+            gl.uniform1i(uwindLoc, mods.wind ? 1 : 0);
+            gl.uniform1i(uringLoc, mods.ring ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             requestAnimationFrame(render);
         }
