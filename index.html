@@ -2,34 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.03 - Control Deck</title>
+    <title>CRi2 / MARIAH v1.04 - High-Vis Deck</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; }
         
         #ui-layer { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; padding: 20px; box-sizing: border-box;
+            pointer-events: none; padding: 30px; box-sizing: border-box;
         }
 
-        #dashboard { margin-bottom: 20px; text-shadow: 2px 2px #000; }
+        #dashboard { 
+            font-size: 18px; 
+            background: rgba(0, 20, 0, 0.5); 
+            display: inline-block; 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 1px solid #040;
+            text-shadow: 2px 2px #000; 
+        }
 
-        /* The Button Console */
+        /* BIG BUTTON CONSOLE */
         #controls { 
-            position: absolute; bottom: 40px; left: 50%; 
-            transform: translateX(-50%); display: flex; gap: 20px; pointer-events: auto;
+            position: absolute; bottom: 60px; left: 50%; 
+            transform: translateX(-50%); display: flex; gap: 30px; pointer-events: auto;
         }
 
         .btn {
-            background: #111; border: 2px solid #444; color: #444;
-            padding: 15px 25px; cursor: pointer; transition: 0.2s;
-            text-transform: uppercase; font-weight: bold; font-size: 12px;
+            background: #111; border: 3px solid #444; color: #888;
+            padding: 25px 45px; cursor: pointer; transition: 0.2s;
+            text-transform: uppercase; 
+            font-weight: 900; 
+            font-size: 24px; /* Doubled size */
+            font-family: 'Courier New', monospace;
+            border-radius: 12px;
         }
 
-        .btn.active { border-color: #0f0; color: #0f0; box-shadow: 0 0 10px #0f0; }
-        .btn:hover { background: #222; }
+        .btn.active { 
+            border-color: #0f0; 
+            color: #0f0; 
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4); 
+            background: #020;
+        }
+        
+        .btn:hover { background: #333; color: #fff; }
 
-        #modeDisplay { font-weight: bold; }
+        #modeDisplay { font-weight: bold; font-size: 22px; }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -48,16 +66,12 @@
 
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
-            
-            // SPRING/WIND Impact on Wiggle
-            float windFactor = (u_wind == 1) ? sin(u_time * 5.0) * 0.05 : 0.0;
+            float windFactor = (u_wind == 1) ? sin(u_time * 8.0) * 0.08 : 0.0;
             float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + windFactor);
+            float line = smoothstep(0.025, 0.0, abs(uv.x - 0.5 + wiggle));
             
-            float line = smoothstep(0.02, 0.0, abs(uv.x - 0.5 + wiggle));
-            
-            // RING MOD Visual Interference
             if(u_ring == 1) {
-                line *= step(0.5, fract(uv.y * 50.0 + u_time * 10.0));
+                line *= step(0.4, fract(uv.y * 60.0 + u_time * 15.0));
             }
 
             vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
@@ -70,14 +84,14 @@
     <div id="ui-layer">
         <div id="dashboard">
             REGISTER: <span id="hexDisplay">0x000000</span><br>
-            MODE: <span id="modeDisplay">LIGHT_MODE</span><br>
-            PSI: <span id="psiDisplay">14.7</span>
+            MODE:     <span id="modeDisplay">LIGHT_MODE</span><br>
+            PSI:      <span id="psiDisplay">14.7</span>
         </div>
 
         <div id="controls">
-            <button id="btnWind" class="btn" onclick="toggleMod('wind')">Wind</button>
-            <button id="btnSpring" class="btn" onclick="toggleMod('spring')">Spring</button>
-            <button id="btnRing" class="btn" onclick="toggleMod('ring')">Ring</button>
+            <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
+            <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
+            <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
         </div>
     </div>
 
@@ -87,7 +101,6 @@
         const canvas = document.getElementById('vortexCanvas');
         const gl = canvas.getContext('webgl');
         
-        // --- SHADER SETUP ---
         function createShader(gl, type, source) {
             const s = gl.createShader(type);
             gl.shaderSource(s, source); gl.compileShader(s); return s;
@@ -111,7 +124,6 @@
         const uwindLoc = gl.getUniformLocation(program, "u_wind");
         const uringLoc = gl.getUniformLocation(program, "u_ring");
 
-        // --- AUDIO ENGINE ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let osc = null, gain = null, ringOsc = null, ringGain = null;
 
@@ -124,37 +136,31 @@
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
             osc.start();
 
-            // Ring Mod Carrier
             ringOsc = audioCtx.createOscillator();
             ringGain = audioCtx.createGain();
             ringOsc.type = 'sine';
-            ringOsc.frequency.setValueAtTime(30, audioCtx.currentTime); 
+            ringOsc.frequency.setValueAtTime(40, audioCtx.currentTime); 
             ringGain.gain.setValueAtTime(0, audioCtx.currentTime);
-            ringOsc.connect(ringGain.gain); // The "Ring" connection
+            ringOsc.connect(ringGain.gain);
             ringOsc.start();
         }
 
-        // --- MOD TOGGLES ---
         let mods = { wind: false, spring: false, ring: false };
         function toggleMod(m) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            initAudio();
             mods[m] = !mods[m];
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active');
             
             if (m === 'ring' && osc) {
-                // Connect/Disconnect Ring Mod logic
                 if (mods.ring) {
-                    osc.disconnect(gain);
-                    osc.connect(ringGain);
-                    ringGain.connect(gain);
+                    osc.disconnect(gain); osc.connect(ringGain); ringGain.connect(gain);
                 } else {
-                    osc.disconnect(ringGain);
-                    ringGain.disconnect(gain);
-                    osc.connect(gain);
+                    osc.disconnect(ringGain); ringGain.disconnect(gain); osc.connect(gain);
                 }
             }
         }
 
-        // --- INPUT & RENDER ---
         let state = { faeMode: 0, pressure: 0.0 };
 
         window.addEventListener('mousemove', (e) => {
@@ -165,10 +171,9 @@
             let angle = (e.clientX / window.innerWidth) * 360;
             state.faeMode = (angle >= 270) ? 1 : 0;
 
-            // Audio Modulation
-            let freq = (mods.spring) ? 55 + (angle * 4) : 55 + (angle * 1.5);
+            let freq = (mods.spring) ? 40 + (angle * 5) : 40 + (angle * 1.8);
             osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
-            gain.gain.setTargetAtTime((1.0 - state.pressure) * 0.15, audioCtx.currentTime, 0.05);
+            gain.gain.setTargetAtTime((1.0 - state.pressure) * 0.2, audioCtx.currentTime, 0.05);
 
             document.getElementById('hexDisplay').innerText = `0x${Math.floor(angle).toString(16).toUpperCase()}${Math.floor(state.pressure * 255).toString(16).toUpperCase()}FF`;
             document.getElementById('modeDisplay').innerText = state.faeMode ? "FAE_MODE" : "LIGHT_MODE";
