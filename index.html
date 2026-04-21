@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.42 - Nuclear Reset</title>
+    <title>CRi2 / MARIAH v1.43 - Ignition Fix</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* BUCKETS FIXED AT 380PX */
+        /* BUCKETS LOCKED AT 380PX */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
             width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
@@ -17,13 +17,12 @@
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
         
-        /* THE FLOOR LOCK: Moved to absolute bottom 0 */
+        /* THE FLOOR LOCK */
         #controls { 
             position: absolute; bottom: 0px; left: 0; width: 100%; 
-            padding-bottom: 15px; /* Creates that 'one row up' feel from the bezel */
+            padding-bottom: 20px; 
             pointer-events: auto; display: flex; flex-direction: column; gap: 8px; 
             align-items: center; z-index: 999; 
-            background: rgba(0,0,0,0.5); /* Slight shadow so it doesn't get lost in the vortex */
         }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
         
@@ -41,7 +40,13 @@
         .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
         
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 32px; color: #0f0; z-index: 10000; cursor: pointer; text-align: center; }
+        /* IGNITION OVERLAY */
+        #overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.98); display: flex; justify-content: center; 
+            align-items: center; font-size: 32px; color: #0f0; z-index: 10000; 
+            cursor: pointer; text-align: center; 
+        }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -74,7 +79,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" ontouchstart="setupEngine()" onclick="setupEngine()">v1.42 NUCLEAR RESET<br>IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.43 RESTORED IGNITION<br>TAP TO START</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -131,22 +136,18 @@
 
         function setupEngine() {
             if (audioCtx) return;
-            document.getElementById('overlay').style.display = 'none';
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = audioCtx.createGain(); masterGain.gain.value = 1; masterGain.connect(audioCtx.destination);
             ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
             ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
+            document.getElementById('overlay').style.display = 'none';
         }
 
-        function killAudio() { 
-            // NUCLEAR RESET: Reload the page to clear the browser's audio memory
-            window.location.reload(true); 
-        }
+        function killAudio() { window.location.reload(true); }
 
         function createVoice() {
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
-            g.gain.value = 0;
-            o.connect(g);
+            g.gain.value = 0; o.connect(g);
             g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
             o.start(); return { osc: o, gain: g, lastAngle: 180 };
@@ -170,12 +171,7 @@
         function toggleMod(m) { 
             setupEngine(); mods[m] = !mods[m]; 
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
-            for (let id in voices) {
-                if (voices[id]) {
-                    voices[id].gain.disconnect();
-                    voices[id].gain.connect(mods.ring ? ringGain : masterGain);
-                }
-            }
+            for (let id in voices) if (voices[id]) { voices[id].gain.disconnect(); voices[id].gain.connect(mods.ring ? ringGain : masterGain); }
         }
         
         function toggleFae() {
@@ -192,10 +188,7 @@
             document.getElementById('btnPlay').classList.toggle('active', seq.play); 
         }
 
-        function angleToChakra(angle) { 
-            let eff = mods.fae ? (360 - angle) : angle;
-            return `hsl(${(eff / 360) * 285}, 100%, 50%)`; 
-        }
+        function angleToChakra(angle) { let eff = mods.fae ? (360 - angle) : angle; return `hsl(${(eff / 360) * 285}, 100%, 50%)`; }
 
         function handleInput(e) {
             setupEngine();
@@ -212,7 +205,7 @@
             }
         }
 
-        function stopInput() { if(!mods.stick) { for(let id in voices) { if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } liveActive = false; } }
+        function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
 
         canvas.addEventListener('mousedown', handleInput);
         window.addEventListener('mouseup', stopInput);
@@ -224,4 +217,30 @@
         setInterval(() => {
             document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
             let ab = document.getElementById('bucket-' + seq.step);
-            if(seq.data[seq.
+            if(seq.data[seq.step]) {
+                ab.classList.add('filled');
+                if(seq.play && !liveActive) {
+                    let d = seq.data[seq.step]; if(!voices['seq']) voices['seq'] = createVoice();
+                    setFreq(voices['seq'], d.a);
+                    voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
+                    let color = angleToChakra(d.a); ab.classList.add('active'); ab.style.backgroundColor = color; ab.style.boxShadow = `0 0 45px ${color}`;
+                }
+            } else if (voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
+            seq.step = (seq.step + 1) % 64;
+        }, 80);
+
+        function render(time) {
+            gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
+            gl.uniform1f(uLocs.time, time * 0.001); 
+            gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); 
+            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
+            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
+            gl.uniform1i(uLocs.spring, mods.spring ? 1 : 0);
+            gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
+            gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
