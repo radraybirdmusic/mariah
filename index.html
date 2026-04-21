@@ -2,75 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.21 - Fixed Deck</title>
+    <title>CRi2 / MARIAH v1.22 - Total Control</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
-        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
-        
+        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        
-        /* FIXED BUCKETS: DROPPED MASSIVELY DOWN */
-        #bucket-grid { 
-            display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; 
-            width: 90%; max-width: 900px; 
-            margin: 160px auto 0 auto; /* MASSIVE 160px DROP FROM TOP */
-            pointer-events: auto;
-        }
-        .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; transition: transform 0.05s; }
+        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; width: 90%; max-width: 900px; margin: 160px auto 0 auto; pointer-events: auto; }
+        .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; }
         .bucket.filled { border: 1px solid #444; background: #111; }
         .bucket.active { transform: scale(1.8); z-index: 10; }
-
-        /* COMMAND DECK: DROPPED LOWER */
         #controls { position: absolute; bottom: 40px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
-
         .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 18px 25px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 12px; min-width: 140px; }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00; color: #000; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 22px; margin-top: 5px; }
-
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 22px; }
         .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 20px; }
-
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; text-align: center; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; }
     </style>
-
-    <script id="vs" type="x-shader/x-vertex">
-        attribute vec4 a_position;
-        void main() { gl_Position = a_position; }
-    </script>
-
-    <script id="fs" type="x-shader/x-fragment">
-        precision mediump float;
-        uniform float u_time;
-        uniform vec2 u_resolution;
-        uniform int u_faemode;
-        uniform float u_pressure;
-        uniform int u_wind;
-        uniform int u_ring;
-        uniform int u_active;
-
-        void main() {
-            vec2 uv = gl_FragCoord.xy / u_resolution;
-            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
-            float wind = (u_wind == 1) ? sin(u_time * 15.0) * 0.12 : 0.0;
-            float wiggle = sin(uv.y * (10.0 + u_pressure * 20.0) + u_time * 3.0) * (0.05 + wind);
-            float line = smoothstep(0.03, 0.0, abs(uv.x - 0.5 + wiggle));
-            if(u_ring == 1) line *= step(0.4, fract(uv.y * 40.0 + u_time * 25.0));
-            vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
-            gl_FragColor = vec4(color * line, line + 0.1);
-        }
-    </script>
 </head>
 <body>
-
-    <div id="overlay" onclick="setupEngine()">v1.21 HARD RESET<br>IGNITE VORTEX</div>
-
+    <div id="overlay" onclick="setupEngine()">v1.22 RESTORED CONTROL<br>CLICK TO START</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
-            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.2"></div>
             <div class="row">
                 <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
@@ -89,7 +47,6 @@
             <button class="btn kill" onclick="killAudio()">!! EMERGENCY KILL !!</button>
         </div>
     </div>
-
     <canvas id="vortexCanvas"></canvas>
 
     <script>
@@ -99,9 +56,11 @@
         for(let i=0; i<64; i++) { let b = document.createElement('div'); b.className = 'bucket'; b.id = 'bucket-' + i; bucketGrid.appendChild(b); }
 
         function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
+        const vsSource = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
+        const fsSource = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_faemode; uniform float u_pressure; uniform int u_wind; uniform int u_ring; uniform int u_active; void main() { vec2 uv = gl_FragCoord.xy / u_resolution; if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; } float wind = (u_wind == 1) ? sin(u_time * 15.0) * 0.12 : 0.0; float wiggle = sin(uv.y * (10.0 + u_pressure * 20.0) + u_time * 3.0) * (0.05 + wind); float line = smoothstep(0.03, 0.0, abs(uv.x - 0.5 + wiggle)); if(u_ring == 1) line *= step(0.4, fract(uv.y * 40.0 + u_time * 25.0)); vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0); gl_FragColor = vec4(color * line, line + 0.1); }`;
         const program = gl.createProgram();
-        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
-        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
         gl.linkProgram(program); gl.useProgram(program);
         const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
@@ -121,12 +80,11 @@
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
                 ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
             }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
         function createVoice() {
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
-            g.gain.value = 0; o.connect(mods.ring ? ringGain : masterGain);
+            g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
             o.start(); return { osc: o, gain: g };
         }
@@ -134,45 +92,41 @@
         function killAudio() { location.reload(); }
         function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)); if(b) b.classList.toggle('active'); }
         function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
-
         function angleToChakra(angle) { let hue = (angle / 360) * 285; return `hsl(${hue}, 100%, 50%)`; }
-
-        function updateVoiceParams(voice, angle) {
-            let range = mods.spring ? 2000 : 800;
-            let freq = mods.fae ? (range - (angle * (mods.spring ? 4.5 : 1.8))) : (40 + (angle * (mods.spring ? 4.5 : 1.8)));
-            voice.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-            voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
-        }
 
         function handleInput(e) {
             setupEngine(); liveActive = true;
             let touches = e.touches || [e];
             for(let i=0; i<touches.length; i++) {
-                let t = touches[i], id = t.identifier || 0, x = t.clientX, y = t.clientY;
-                let angle = (x / window.innerWidth) * 360, pressure = y / window.innerHeight;
+                let t = touches[i], id = t.identifier || 0;
+                let angle = (t.clientX / window.innerWidth) * 360;
                 if(!voices[id]) voices[id] = createVoice();
-                updateVoiceParams(voices[id], angle);
+                let range = mods.spring ? 2000 : 800;
+                let freq = mods.fae ? (range - (angle * (mods.spring ? 4.5 : 1.8))) : (40 + (angle * (mods.spring ? 4.5 : 1.8)));
+                voices[id].osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
+                voices[id].osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / touches.length, audioCtx.currentTime, 0.05);
-                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure };
+                if(seq.rec) seq.data[seq.step] = { a: angle, p: t.clientY / window.innerHeight };
             }
         }
 
         function stopInput() { if(!mods.stick) { for(let id in voices) { if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } liveActive = false; } }
 
-        canvas.addEventListener('mousedown', handleInput); canvas.addEventListener('mousemove', (e) => { if(e.buttons) handleInput(e); }); canvas.addEventListener('mouseup', stopInput);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }); canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }); canvas.addEventListener('touchend', stopInput);
+        canvas.addEventListener('mousedown', handleInput); canvas.addEventListener('mouseup', stopInput);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }); canvas.addEventListener('touchend', stopInput);
 
         setInterval(() => {
             document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
-            let activeBucket = document.getElementById('bucket-' + seq.step);
+            let ab = document.getElementById('bucket-' + seq.step);
             if(seq.data[seq.step]) {
-                activeBucket.classList.add('filled');
+                ab.classList.add('filled');
                 if(seq.play && !liveActive) {
-                    let d = seq.data[seq.step];
-                    if(!voices['seq']) voices['seq'] = createVoice();
-                    updateVoiceParams(voices['seq'], d.a);
+                    let d = seq.data[seq.step]; if(!voices['seq']) voices['seq'] = createVoice();
+                    let range = mods.spring ? 2000 : 800;
+                    let freq = mods.fae ? (range - (d.a * (mods.spring ? 4.5 : 1.8))) : (40 + (d.a * (mods.spring ? 4.5 : 1.8)));
+                    voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.35 : 0.08);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
-                    let color = angleToChakra(d.a); activeBucket.classList.add('active'); activeBucket.style.backgroundColor = color; activeBucket.style.boxShadow = `0 0 45px ${color}`;
+                    let color = angleToChakra(d.a); ab.classList.add('active'); ab.style.backgroundColor = color; ab.style.boxShadow = `0 0 45px ${color}`;
                 }
             } else if (voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
             seq.step = (seq.step + 1) % 64;
@@ -181,8 +135,7 @@
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
             gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1f(uLocs.pres, 0.5);
-            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0); gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
+            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0); gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
             gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
         }
