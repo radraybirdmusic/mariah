@@ -2,24 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.40 - Visual Snap</title>
+    <title>CRi2 / MARIAH v1.41 - Cumulative Logic</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto; }
+        
+        /* BUCKETS LOCKED AT 380PX */
+        #bucket-grid { 
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
+            width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
+        }
         .bucket { aspect-ratio: 1/1; border: 2px solid #333; border-radius: 50%; background: #080808; }
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
-        #controls { position: absolute; bottom: 40px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: 999; }
+        
+        /* DECK DROPPED TO THE FLOOR - One row up from bottom */
+        #controls { position: absolute; bottom: 10px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: 999; }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+        
         .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 20px 25px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 20px; border-radius: 12px; min-width: 130px; touch-action: none; -webkit-user-select: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00 !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 24px; }
+        
         .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
+        
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 32px; color: #0f0; z-index: 10000; cursor: pointer; text-align: center; }
     </style>
 
@@ -41,17 +51,11 @@
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
-            
-            float tension = (u_spring == 1) ? 40.0 : 15.0;
-            float windEffect = (u_wind == 1) ? sin(u_time * 20.0) * 0.15 : 0.0;
-            
-            float wave = sin(uv.y * tension + u_time * 5.0) * (0.05 + windEffect);
+            float tension = (u_spring == 1) ? 45.0 : 18.0;
+            float windEffect = (u_wind == 1) ? sin(u_time * 25.0) * 0.18 : 0.0;
+            float wave = sin(uv.y * tension + u_time * 6.0) * (0.05 + windEffect);
             float dist = abs(uv.x - 0.5 + wave);
-            
-            if(u_ring == 1) {
-                dist += step(0.5, fract(uv.y * 100.0 + u_time * 40.0)) * 0.02;
-            }
-            
+            if(u_ring == 1) dist += step(0.5, fract(uv.y * 120.0 + u_time * 50.0)) * 0.03;
             float line = smoothstep(0.04, 0.0, dist);
             vec3 color = (u_fae == 1) ? vec3(0.0, 1.0, 1.0) : vec3(1.0, 0.2, 0.1);
             gl_FragColor = vec4(color * line, line + 0.1);
@@ -59,7 +63,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" ontouchstart="setupEngine()">v1.40 VISUAL SNAP<br>IGNITE</div>
+    <div id="overlay" ontouchstart="setupEngine()">v1.41 CUMULATIVE<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -79,7 +83,7 @@
                 <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
                 <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
             </div>
-            <button class="btn kill" ontouchstart="killAudio()">!! EMERGENCY KILL !!</button>
+            <button class="btn kill" ontouchstart="killAudio()" onclick="killAudio()">!! EMERGENCY KILL !!</button>
         </div>
     </div>
     <canvas id="vortexCanvas"></canvas>
@@ -125,7 +129,10 @@
 
         function createVoice() {
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
-            g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
+            g.gain.value = 0;
+            // DYNAMIC SIGNAL ROUTING
+            o.connect(g);
+            g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
             o.start(); return { osc: o, gain: g, lastAngle: 180 };
         }
@@ -148,6 +155,14 @@
         function toggleMod(m) { 
             setupEngine(); mods[m] = !mods[m]; 
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
+            // Update Signal Chain for ALL voices
+            for (let id in voices) {
+                if (voices[id]) {
+                    voices[id].gain.disconnect();
+                    voices[id].gain.connect(mods.ring ? ringGain : masterGain);
+                    if (mods.ring) ringGain.connect(masterGain);
+                }
+            }
         }
         
         function toggleFae() {
@@ -199,7 +214,8 @@
             if(seq.data[seq.step]) {
                 ab.classList.add('filled');
                 if(seq.play && !liveActive) {
-                    let d = seq.data[seq.step]; if(!voices['seq']) voices['seq'] = createVoice();
+                    let d = seq.data[seq.step]; 
+                    if(!voices['seq']) voices['seq'] = createVoice();
                     setFreq(voices['seq'], d.a);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
                     let color = angleToChakra(d.a); ab.classList.add('active'); ab.style.backgroundColor = color; ab.style.boxShadow = `0 0 45px ${color}`;
