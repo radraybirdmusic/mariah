@@ -2,47 +2,64 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.39 - Hammer-On</title>
+    <title>CRi2 / MARIAH v1.40 - Visual Snap</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
-        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        
-        /* BUCKETS - LOCKED AT 380PX */
-        #bucket-grid { 
-            display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
-            width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
-        }
+        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 2px solid #333; border-radius: 50%; background: #080808; }
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
-        
         #controls { position: absolute; bottom: 40px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: 999; }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
-        
-        .btn { 
-            background: #000; border: 4px solid #0f0; color: #0f0; 
-            padding: 20px 25px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 20px; border-radius: 12px; min-width: 130px;
-            /* DISABLE BROWSER DELAYS */
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
+        .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 20px 25px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 20px; border-radius: 12px; min-width: 130px; touch-action: none; -webkit-user-select: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00 !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 24px; }
-        
         .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
-        
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 32px; color: #0f0; z-index: 10000; cursor: pointer; text-align: center; }
     </style>
+
+    <script id="vs" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        void main() { gl_Position = a_position; }
+    </script>
+
+    <script id="fs" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform float u_time;
+        uniform vec2 u_resolution;
+        uniform int u_fae;
+        uniform int u_wind;
+        uniform int u_ring;
+        uniform int u_spring;
+        uniform int u_active;
+
+        void main() {
+            vec2 uv = gl_FragCoord.xy / u_resolution;
+            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
+            
+            float tension = (u_spring == 1) ? 40.0 : 15.0;
+            float windEffect = (u_wind == 1) ? sin(u_time * 20.0) * 0.15 : 0.0;
+            
+            float wave = sin(uv.y * tension + u_time * 5.0) * (0.05 + windEffect);
+            float dist = abs(uv.x - 0.5 + wave);
+            
+            if(u_ring == 1) {
+                dist += step(0.5, fract(uv.y * 100.0 + u_time * 40.0)) * 0.02;
+            }
+            
+            float line = smoothstep(0.04, 0.0, dist);
+            vec3 color = (u_fae == 1) ? vec3(0.0, 1.0, 1.0) : vec3(1.0, 0.2, 0.1);
+            gl_FragColor = vec4(color * line, line + 0.1);
+        }
+    </script>
 </head>
 <body>
-    <div id="overlay" ontouchstart="setupEngine()" onclick="setupEngine()">v1.39 HAMMER-ON<br>IGNITE</div>
+    <div id="overlay" ontouchstart="setupEngine()">v1.40 VISUAL SNAP<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -74,16 +91,23 @@
         for(let i=0; i<64; i++) { let b = document.createElement('div'); b.className = 'bucket'; b.id = 'bucket-' + i; bucketGrid.appendChild(b); }
 
         function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
-        const vsSource = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
-        const fsSource = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_faemode; uniform float u_pressure; uniform int u_wind; uniform int u_ring; uniform int u_active; void main() { vec2 uv = gl_FragCoord.xy / u_resolution; if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; } float wind = (u_wind == 1) ? sin(u_time * 15.0) * 0.12 : 0.0; float wiggle = sin(uv.y * (10.0 + u_pressure * 20.0) + u_time * 3.0) * (0.05 + wind); float line = smoothstep(0.03, 0.0, abs(uv.x - 0.5 + wiggle)); if(u_ring == 1) line *= step(0.4, fract(uv.y * 40.0 + u_time * 25.0)); vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0); gl_FragColor = vec4(color * line, line + 0.1); }`;
         const program = gl.createProgram();
-        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
-        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
         gl.linkProgram(program); gl.useProgram(program);
         const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
         const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), active: gl.getUniformLocation(program, "u_active") };
+        
+        const uLocs = { 
+            time: gl.getUniformLocation(program, "u_time"), 
+            res: gl.getUniformLocation(program, "u_resolution"), 
+            fae: gl.getUniformLocation(program, "u_fae"), 
+            wind: gl.getUniformLocation(program, "u_wind"), 
+            ring: gl.getUniformLocation(program, "u_ring"), 
+            spring: gl.getUniformLocation(program, "u_spring"), 
+            active: gl.getUniformLocation(program, "u_active") 
+        };
 
         let audioCtx = null, masterGain = null, ringOsc = null, ringGain = null;
         let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false, stick: false };
@@ -121,15 +145,13 @@
             voice.lastAngle = angle;
         }
 
-        // --- HAMMER-ON TOGGLES ---
         function toggleMod(m) { 
             setupEngine(); mods[m] = !mods[m]; 
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
         }
         
         function toggleFae() {
-            setupEngine();
-            mods.fae = !mods.fae;
+            setupEngine(); mods.fae = !mods.fae;
             document.getElementById('btnFae').classList.toggle('active', mods.fae);
             Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); });
         }
@@ -142,7 +164,10 @@
             document.getElementById('btnPlay').classList.toggle('active', seq.play); 
         }
 
-        function angleToChakra(angle) { let eff = mods.fae ? (360 - angle) : angle; return `hsl(${(eff / 360) * 285}, 100%, 50%)`; }
+        function angleToChakra(angle) { 
+            let eff = mods.fae ? (360 - angle) : angle;
+            return `hsl(${(eff / 360) * 285}, 100%, 50%)`; 
+        }
 
         function handleInput(e) {
             setupEngine();
@@ -164,14 +189,8 @@
         canvas.addEventListener('mousedown', handleInput);
         window.addEventListener('mouseup', stopInput);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons === 1) handleInput(e); });
-        canvas.addEventListener('touchstart', (e) => { 
-            if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); 
-            handleInput(e); 
-        }, {passive: false});
-        canvas.addEventListener('touchmove', (e) => { 
-            if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); 
-            handleInput(e); 
-        }, {passive: false});
+        canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
         canvas.addEventListener('touchend', stopInput);
 
         setInterval(() => {
@@ -193,8 +212,13 @@
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
-            gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
+            gl.uniform1f(uLocs.time, time * 0.001); 
+            gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); 
+            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
+            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
+            gl.uniform1i(uLocs.spring, mods.spring ? 1 : 0);
+            gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
         }
         requestAnimationFrame(render);
