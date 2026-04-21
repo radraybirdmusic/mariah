@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.43 - Ignition Fix</title>
+    <title>CRi2 / MARIAH v1.44 - Absolute Floor</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* BUCKETS LOCKED AT 380PX */
+        /* BUCKETS LOCKED AT 380PX - DO NOT TOUCH */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
             width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
@@ -17,11 +17,12 @@
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
         
-        /* THE FLOOR LOCK */
+        /* THE ABSOLUTE FLOOR: Hard-coded to the bottom edge */
         #controls { 
-            position: absolute; bottom: 0px; left: 0; width: 100%; 
-            padding-bottom: 20px; 
-            pointer-events: auto; display: flex; flex-direction: column; gap: 8px; 
+            position: absolute; 
+            bottom: 20px; /* Exactly one row's distance from the physical bottom */
+            left: 0; width: 100%; 
+            pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; 
             align-items: center; z-index: 999; 
         }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
@@ -35,12 +36,12 @@
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00 !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 24px; margin-top: 5px; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 24px; margin-bottom: 5px; }
         
-        .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
+        /* Slider moved to top of the deck to stay out of the way */
+        .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; margin-bottom: 10px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
         
-        /* IGNITION OVERLAY */
         #overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.98); display: flex; justify-content: center; 
@@ -79,16 +80,14 @@
     </script>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.43 RESTORED IGNITION<br>TAP TO START</div>
+    <div id="overlay" onclick="setupEngine()">v1.44 ABSOLUTE FLOOR<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
-            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+            <button class="btn kill" ontouchstart="killAudio()">!! NUCLEAR KILL RESET !!</button>
             <div class="row">
-                <button id="btnRec" class="btn rec" ontouchstart="toggleSeq('rec')">REC</button>
-                <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play')">PLAY</button>
-                <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
-                <button id="btnStick" class="btn" ontouchstart="toggleMod('stick')">STICK</button>
+                <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
+                <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
             </div>
             <div class="row">
                 <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow')">EBOW</button>
@@ -96,10 +95,12 @@
                 <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring')">SPRING</button>
             </div>
             <div class="row">
-                <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
-                <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
+                <button id="btnRec" class="btn rec" ontouchstart="toggleSeq('rec')">REC</button>
+                <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play')">PLAY</button>
+                <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
+                <button id="btnStick" class="btn" ontouchstart="toggleMod('stick')">STICK</button>
             </div>
-            <button class="btn kill" ontouchstart="killAudio()">!! NUCLEAR KILL RESET !!</button>
+            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
         </div>
     </div>
     <canvas id="vortexCanvas"></canvas>
