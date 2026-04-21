@@ -2,17 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.27 - Direct Ignite</title>
+    <title>CRi2 / MARIAH v1.28 - Raw Input</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
-        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; width: 90%; max-width: 900px; margin: 160px auto 0 auto; pointer-events: auto; }
-        .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; }
-        .bucket.filled { border: 1px solid #444; background: #111; }
-        .bucket.active { transform: scale(1.8); z-index: 10; }
+        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
-        #controls { position: absolute; bottom: 60px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; z-index: 200; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        #bucket-grid { 
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; 
+            width: 90%; max-width: 900px; margin: 160px auto 0 auto; pointer-events: auto;
+        }
+        .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; transition: transform 0.05s; }
+        .bucket.filled { border: 1px solid #444; background: #111; }
+        .bucket.active { transform: scale(1.8); z-index: 100; }
+        
+        #controls { position: absolute; bottom: 60px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
         .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 18px 25px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 12px; min-width: 140px; touch-action: manipulation; }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
@@ -20,13 +25,14 @@
         .btn.rec.active { background: #f00; color: #000; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 22px; }
         
-        .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
-        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 20px; cursor: pointer; pointer-events: auto; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 1000; cursor: pointer; }
+        .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; pointer-events: auto; }
+        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 20px; cursor: pointer; }
+        
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 1000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onpointerdown="setupEngine()">v1.27 DIRECT IGNITE<br>TAP TO START</div>
+    <div id="overlay" onpointerdown="setupEngine()">v1.28 RAW INPUT<br>TAP TO START</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -90,8 +96,6 @@
             o.start(); return { osc: o, gain: g, lastAngle: 180 };
         }
 
-        function killAudio() { location.reload(); }
-        
         function setFreq(voice, angle, instant = false) {
             if (!voice || !voice.osc) return;
             let maxFreq = mods.spring ? 2000 : 800;
@@ -108,23 +112,15 @@
         }
 
         function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)); if(b) b.classList.toggle('active'); }
-        
-        function toggleFae() {
-            setupEngine(); mods.fae = !mods.fae;
-            document.getElementById('btnFae').classList.toggle('active');
-            for (let id in voices) if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true);
-        }
-
+        function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active'); for (let id in voices) if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
         function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
-        
-        function angleToChakra(angle) { 
-            let baseAngle = mods.fae ? (360 - angle) : angle;
-            return `hsl(${(baseAngle / 360) * 285}, 100%, 50%)`; 
-        }
+        function angleToChakra(angle) { let baseAngle = mods.fae ? (360 - angle) : angle; return `hsl(${(baseAngle / 360) * 285}, 100%, 50%)`; }
 
+        function killAudio() { location.reload(); }
+
+        // --- DIRECT ATTACH TO CANVAS ---
         function handleInput(e) {
             setupEngine();
-            if (e.target.closest('#controls') || e.target.closest('#bucket-grid')) return;
             liveActive = true;
             let touches = e.touches || [e];
             for(let i=0; i<touches.length; i++) {
@@ -132,16 +128,17 @@
                 let angle = (t.clientX / window.innerWidth) * 360;
                 if(!voices[id]) voices[id] = createVoice();
                 setFreq(voices[id], angle);
-                voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / (touches.length || 1), audioCtx.currentTime, 0.05);
+                voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
                 if(seq.rec) seq.data[seq.step] = { a: angle, p: t.clientY / window.innerHeight };
             }
         }
 
-        function stopInput(e) { if(!mods.stick) { for(let id in voices) { if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } liveActive = false; } }
+        function stopInput() { if(!mods.stick) { for(let id in voices) { if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } liveActive = false; } }
 
-        window.addEventListener('pointerdown', handleInput); 
-        window.addEventListener('pointermove', (e) => { if(e.buttons === 1) handleInput(e); });
-        window.addEventListener('pointerup', stopInput);
+        canvas.addEventListener('pointerdown', handleInput);
+        canvas.addEventListener('pointermove', (e) => { if(e.buttons === 1) handleInput(e); });
+        canvas.addEventListener('pointerup', stopInput);
+        canvas.addEventListener('pointerleave', stopInput);
 
         setInterval(() => {
             document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
