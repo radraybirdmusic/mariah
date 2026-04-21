@@ -2,47 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.15 - Safe Zone</title>
+    <title>CRi2 / MARIAH v1.16 - Live Inversion</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
-        #ui-layer { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; padding: 10px; display: flex; flex-direction: column; 
-            justify-content: flex-start; /* Aligns content from the top with padding */
-        }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 10px; }
         
-        /* THE 64 BUCKETS - Moved down into the 'Safe Zone' */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 12px; 
-            width: 90%; max-width: 800px; margin: 60px auto 20px auto; /* 60px Top Margin for clearance */
-            pointer-events: auto;
+            width: 90%; max-width: 800px; margin: 60px auto 20px auto; pointer-events: auto;
         }
-        .bucket { 
-            aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; 
-            background: #050505; transition: all 0.1s;
-        }
-        .bucket.filled { border-color: #444; background: #222; }
-        .bucket.active { 
-            transform: scale(1.6); 
-            box-shadow: 0 0 35px currentColor, inset 0 0 15px currentColor; 
-            z-index: 10;
-        }
+        .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; transition: all 0.05s; }
+        .bucket.filled { border-color: #444; background: #151515; }
+        
+        /* THE DYNAMIC GLOWS */
+        .bucket.active-light { transform: scale(1.6); box-shadow: 0 0 35px #f31, inset 0 0 15px #f31; color: #f31; z-index: 10; }
+        .bucket.active-fae { transform: scale(1.6); box-shadow: 0 0 35px #0ff, inset 0 0 15px #0ff; color: #0ff; z-index: 10; }
 
-        #controls { 
-            position: absolute; bottom: 20px; left: 0; width: 100%;
-            pointer-events: auto; display: flex; flex-direction: column; 
-            gap: 12px; align-items: center; padding-bottom: 10px; 
-        }
+        #controls { position: absolute; bottom: 20px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
         .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
 
-        .btn {
-            background: #000; border: 4px solid #0f0; color: #0f0;
-            padding: 20px 30px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 20px; border-radius: 12px; 
-            min-width: 150px;
-        }
+        .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 20px 30px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 20px; border-radius: 12px; min-width: 150px; }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00; color: #000; box-shadow: 0 0 30px #f00; }
@@ -51,11 +32,7 @@
         .slider-box { background: #111; padding: 12px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 15px; }
 
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.98); display: flex; justify-content: center;
-            align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; text-align: center;
-        }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; text-align: center; }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -87,31 +64,26 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">v1.15 STABLE BRAIN<br>TOUCH TO IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.16 LIVE INVERSION<br>TOUCH TO IGNITE</div>
 
     <div id="ui-layer">
         <div id="bucket-grid"></div>
-
         <div id="controls">
-            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="0.7" step="0.01" value="0.2"></div>
-            
+            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="0.7" step="0.01" value="0.25"></div>
             <div class="row">
                 <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
                 <button id="btnFae" class="btn" onclick="toggleMod('fae')">FAE</button>
             </div>
-
             <div class="row">
                 <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
                 <button id="btnTheremin" class="btn" onclick="toggleMod('theremin')">THEREMIN</button>
                 <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
             </div>
-
             <div class="row">
                 <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
                 <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
             </div>
-
             <button class="btn kill" onclick="killAudio()">!! EMERGENCY KILL !!</button>
         </div>
     </div>
@@ -151,7 +123,7 @@
             document.getElementById('overlay').style.display = 'none';
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                masterGain = audioCtx.createGain(); masterGain.gain.value = 0.2; masterGain.connect(audioCtx.destination);
+                masterGain = audioCtx.createGain(); masterGain.gain.value = 0.25; masterGain.connect(audioCtx.destination);
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
                 ringOsc.type = 'sine'; ringOsc.frequency.value = 50; ringOsc.connect(ringGain.gain); ringOsc.start();
             }
@@ -160,7 +132,6 @@
 
         function createVoice(id) {
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
-            o.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
             g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if(mods.ring) ringGain.connect(masterGain);
             o.start(); return { osc: o, gain: g };
@@ -182,6 +153,20 @@
             document.getElementById('btnPlay').classList.toggle('active', seq.play);
         }
 
+        function updateVoiceParams(voice, angle) {
+            let range = mods.spring ? 1800 : 700;
+            let freq;
+            if (mods.fae) {
+                freq = range - (angle * (mods.spring ? 4.5 : 1.8));
+                voice.osc.type = mods.theremin ? 'sine' : 'triangle';
+            } else {
+                freq = 40 + (angle * (mods.spring ? 4.5 : 1.8));
+                voice.osc.type = mods.theremin ? 'sine' : 'sawtooth';
+            }
+            let glide = mods.ebow ? 0.35 : 0.05;
+            voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, glide);
+        }
+
         function handleTouch(e) {
             e.preventDefault(); setupEngine();
             let touches = e.touches || [e]; activeTouches = touches.length;
@@ -189,17 +174,14 @@
                 let t = touches[i], id = t.identifier || 0, x = t.clientX, y = t.clientY;
                 let angle = (x / window.innerWidth) * 360, pressure = y / window.innerHeight;
                 if(!voices[id]) voices[id] = createVoice(id);
-                let range = mods.spring ? 1800 : 700;
-                let freq = mods.fae ? (range - (angle * 2.0)) : (40 + (angle * 2.0));
-                let glide = mods.ebow ? 0.35 : 0.05;
-                voices[id].osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, glide);
+                updateVoiceParams(voices[id], angle);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / activeTouches, audioCtx.currentTime, 0.05);
-                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure, fae: mods.fae };
+                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure };
             }
         }
 
         function endTouch() {
-            for(let id in voices) { voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
+            for(let id in voices) { if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
             activeTouches = 0;
         }
 
@@ -208,7 +190,7 @@
         canvas.addEventListener('mouseup', endTouch);
 
         setInterval(() => {
-            document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.color = 'transparent'; });
+            document.querySelectorAll('.bucket').forEach(b => b.className = b.classList.contains('filled') ? 'bucket filled' : 'bucket');
             let activeBucket = document.getElementById('bucket-' + seq.step);
             
             if(seq.data[seq.step]) {
@@ -216,12 +198,11 @@
                 if(seq.play && activeTouches === 0) {
                     let d = seq.data[seq.step];
                     if(!voices['seq']) voices['seq'] = createVoice('seq');
-                    let range = mods.spring ? 1800 : 700;
-                    let freq = d.fae ? (range - (d.a * 2.0)) : (40 + (d.a * 2.0));
-                    voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.35 : 0.08);
+                    updateVoiceParams(voices['seq'], d.a);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
-                    activeBucket.classList.add('active');
-                    activeBucket.style.color = d.fae ? '#0ff' : '#f31';
+                    
+                    // BUCKET COLOR LOGIC: Live Flip
+                    activeBucket.className = mods.fae ? 'bucket filled active-fae' : 'bucket filled active-light';
                 }
             } else if (voices['seq']) {
                 voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
