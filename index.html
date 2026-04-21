@@ -2,34 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.11 - EBow & Inversion</title>
+    <title>CRi2 / MARIAH v1.12 - Multi-Touch & Step Buckets</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; box-sizing: border-box; }
-        #dashboard { font-size: 16px; background: rgba(0, 20, 0, 0.85); display: inline-block; padding: 15px; border-radius: 8px; border: 2px solid #0f0; pointer-events: auto; box-shadow: 0 0 15px rgba(0,255,0,0.2); }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; }
+        
+        /* THE BUCKET ARRAY (8x8 Grid for 64 Steps) */
+        #bucket-grid { 
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; 
+            width: 320px; background: rgba(0,20,0,0.8); padding: 10px; border: 1px solid #040; margin-bottom: 10px;
+        }
+        .bucket { width: 12px; height: 12px; border: 1px solid #030; border-radius: 2px; background: #000; }
+        .bucket.filled { background: #f31; border-color: #f31; box-shadow: 0 0 5px #f31; }
+        .bucket.active { border-color: #0f0; background: #0f0; }
 
-        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 15px; pointer-events: auto; align-items: center; }
-        .row { display: flex; gap: 15px; }
+        #dashboard { font-size: 14px; background: rgba(0, 20, 0, 0.85); display: inline-block; padding: 12px; border: 2px solid #0f0; pointer-events: auto; }
+
+        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: center; }
+        .row { display: flex; gap: 10px; }
 
         .btn {
-            background: #000; border: 3px solid #0f0; color: #0f0;
-            padding: 15px 30px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 18px; border-radius: 10px; transition: 0.1s;
+            background: #000; border: 2px solid #0f0; color: #0f0;
+            padding: 12px 20px; cursor: pointer; text-transform: uppercase; 
+            font-weight: 900; font-size: 14px; border-radius: 8px;
         }
-        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 25px #0f0; }
-        .btn.kill { border-color: #f00; color: #f00; background: #200; font-size: 22px; width: 100%; }
-        .btn.kill:active { background: #f00; color: #fff; }
+        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 15px #0f0; }
+        .btn.kill { border-color: #f00; color: #f00; font-size: 18px; width: 100%; margin-bottom: 5px; }
 
-        .slider-box { background: #111; padding: 10px 20px; border: 2px solid #444; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; margin-top:10px; }
-        input[type=range] { cursor: pointer; flex-grow: 1; accent-color: #0f0; }
+        .slider-box { background: #111; padding: 5px 15px; border: 1px solid #444; border-radius: 8px; display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; margin-top:5px; }
+        input[type=range] { flex-grow: 1; accent-color: #0f0; cursor: pointer; }
 
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: flex; justify-content: center;
-            align-items: center; font-size: 24px; color: #0f0; z-index: 100;
-            cursor: pointer; text-align: center; line-height: 1.5;
+            align-items: center; font-size: 24px; color: #0f0; z-index: 100; text-align: center; cursor: pointer;
         }
     </style>
 
@@ -50,15 +58,11 @@
 
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
-            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
-            
-            float windFactor = (u_wind == 1) ? sin(u_time * 8.0) * 0.08 : 0.0;
-            float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + windFactor);
+            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.03, 0.0, 1.0); return; }
+            float wind = (u_wind == 1) ? sin(u_time * 8.0) * 0.08 : 0.0;
+            float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + wind);
             float line = smoothstep(0.025, 0.0, abs(uv.x - 0.5 + wiggle));
-            
             if(u_ring == 1) line *= step(0.4, fract(uv.y * 60.0 + u_time * 15.0));
-
-            // Visual FAE Inversion
             vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
             gl_FragColor = vec4(color * line, line + 0.1);
         }
@@ -66,19 +70,19 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">CRi2 / MARIAH v1.11<br>INIT VORTEX ENGINE<br>(CLICK TO IGNITE)</div>
+    <div id="overlay" onclick="setupEngine()">v1.12 - SEXTANT MULTI-TOUCH<br>CLICK TO IGNITE</div>
 
     <div id="ui-layer">
+        <div id="bucket-grid"></div>
         <div id="dashboard">
-            HEX: 0x<span id="hexDisplay">00</span> | STEP: <span id="stepDisplay">00/64</span><br>
+            HEX: 0x<span id="hexDisplay">00</span> | STEP: <span id="stepDisplay">00</span>
             <div class="slider-box">
-                <span>VOL</span>
-                <input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.12">
+                <span>VOL</span> <input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.1">
             </div>
         </div>
 
         <div id="controls">
-            <button class="btn kill" onclick="killAudio()">!! KILL SOUND !!</button>
+            <button class="btn kill" onclick="killAudio()">!! KILL !!</button>
             <div class="row">
                 <button id="btnRec" class="btn" style="color:#f00; border-color:#f00;" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
@@ -97,54 +101,44 @@
     <script>
         const canvas = document.getElementById('vortexCanvas');
         const gl = canvas.getContext('webgl');
+        const bucketGrid = document.getElementById('bucket-grid');
         
+        // --- 1. BUILD THE 64 BUCKETS ---
+        for(let i=0; i<64; i++) {
+            let b = document.createElement('div');
+            b.className = 'bucket';
+            b.id = 'bucket-' + i;
+            bucketGrid.appendChild(b);
+        }
+
+        // --- SHADER SETUP ---
         function createShader(gl, type, source) {
-            const s = gl.createShader(type);
-            gl.shaderSource(s, source); gl.compileShader(s); return s;
+            const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s;
         }
         const program = gl.createProgram();
         gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
         gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
         gl.linkProgram(program); gl.useProgram(program);
-
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
         const posLoc = gl.getAttribLocation(program, "a_position");
         gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), pres: gl.getUniformLocation(program, "u_pressure"), wind: gl.getUniformLocation(program, "u_wind"), ring: gl.getUniformLocation(program, "u_ring"), active: gl.getUniformLocation(program, "u_active") };
 
-        const uLocs = {
-            time: gl.getUniformLocation(program, "u_time"),
-            res: gl.getUniformLocation(program, "u_resolution"),
-            fae: gl.getUniformLocation(program, "u_faemode"),
-            pres: gl.getUniformLocation(program, "u_pressure"),
-            wind: gl.getUniformLocation(program, "u_wind"),
-            ring: gl.getUniformLocation(program, "u_ring"),
-            active: gl.getUniformLocation(program, "u_active")
-        };
-
-        // --- AUDIO ENGINE v1.11 ---
-        let audioCtx = null, osc = null, masterGain = null, ringOsc = null, ringGain = null;
+        // --- MULTI-TOUCH AUDIO ENGINE ---
+        let audioCtx = null, masterGain = null, ringOsc = null, ringGain = null;
+        let voices = {}; // Store oscillators for multiple fingers
         let mods = { wind: false, spring: false, ring: false, fae: false };
         let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
-        let liveInput = { angle: 180, pressure: 0.5, active: false };
-        
-        // EBow Glide Setting
-        const PITCH_GLIDE = 0.12; 
+        let activeTouches = 0;
 
         function setupEngine() {
             document.getElementById('overlay').style.display = 'none';
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 masterGain = audioCtx.createGain();
-                masterGain.gain.value = 0;
+                masterGain.gain.value = 0.1;
                 masterGain.connect(audioCtx.destination);
-
-                osc = audioCtx.createOscillator(); 
-                osc.type = 'sawtooth'; 
-                osc.connect(masterGain); 
-                osc.start();
-
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
                 ringOsc.type = 'sine'; ringOsc.frequency.value = 40; 
                 ringOsc.connect(ringGain.gain); ringOsc.start();
@@ -152,92 +146,100 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function killAudio() {
-            if(audioCtx) {
-                audioCtx.close().then(() => {
-                    audioCtx = null;
-                    document.getElementById('overlay').style.display = 'flex';
-                    document.getElementById('overlay').innerHTML = "ENGINE KILLED.<br>CLICK TO REARM.";
-                });
-            }
+        function createVoice(id) {
+            let o = audioCtx.createOscillator();
+            let g = audioCtx.createGain();
+            o.type = mods.fae ? 'triangle' : 'sawtooth';
+            g.gain.value = 0;
+            o.connect(g);
+            g.connect(mods.ring ? ringGain : masterGain);
+            if(mods.ring) ringGain.connect(masterGain);
+            o.start();
+            return { osc: o, gain: g };
         }
 
-        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active'); 
-            if (m === 'ring' && osc) {
-                if (mods.ring) { osc.disconnect(masterGain); osc.connect(ringGain); ringGain.connect(masterGain); }
-                else { osc.disconnect(ringGain); ringGain.disconnect(masterGain); osc.connect(masterGain); }
-            }
-        }
+        function killAudio() { if(audioCtx) { audioCtx.close().then(() => { audioCtx = null; location.reload(); }); } }
 
+        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active'); }
         function toggleSeq(mode) { setupEngine(); 
-            if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) { seq.step = 0; seq.play = false; } }
-            if (mode === 'play') { seq.play = !seq.play; if(seq.play) seq.rec = false; }
-            document.getElementById('btnRec').classList.toggle('active', seq.rec);
-            document.getElementById('btnPlay').classList.toggle('active', seq.play);
+            if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; }
+            if (mode === 'play') seq.play = !seq.play;
+            document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play);
         }
 
-        function updatePitch(angle) {
-            if (!osc) return;
-            let freq;
-            let range = mods.spring ? 1800 : 700;
-            
-            if (mods.fae) {
-                // THE INVERSION: Higher angle = Lower Frequency
-                freq = range - (mods.spring ? (angle * 4.5) : (angle * 1.6));
-                osc.type = 'triangle'; // Darker Inverse Texture
-            } else {
-                // NORMAL: Higher angle = Higher Frequency
-                freq = 40 + (mods.spring ? (angle * 4.5) : (angle * 1.6));
-                osc.type = 'sawtooth'; // Brighter Light Texture
+        function handleTouch(e) {
+            e.preventDefault();
+            setupEngine();
+            let touches = e.touches || [e];
+            activeTouches = touches.length;
+
+            for(let i=0; i<touches.length; i++) {
+                let t = touches[i];
+                let id = t.identifier || 0;
+                let x = t.clientX, y = t.clientY;
+                let angle = (x / window.innerWidth) * 360;
+                let pressure = y / window.innerHeight;
+
+                if(!voices[id]) voices[id] = createVoice(id);
+                
+                let range = mods.spring ? 1800 : 700;
+                let freq = mods.fae ? (range - (angle * 1.8)) : (40 + (angle * 1.8));
+                voices[id].osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, 0.1);
+                voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / activeTouches, audioCtx.currentTime, 0.05);
+
+                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure, active: true };
+                document.getElementById('hexDisplay').innerText = Math.floor(angle).toString(16).toUpperCase();
             }
-            
-            // THE EBOW GLIDE (Swoop)
-            osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, PITCH_GLIDE);
         }
 
-        function handleInput(e) {
-            if (!audioCtx) return;
-            liveInput.active = true;
-            const x = e.touches ? e.touches[0].clientX : e.clientX;
-            const y = e.touches ? e.touches[0].clientY : e.clientY;
-            liveInput.pressure = y / window.innerHeight;
-            liveInput.angle = (x / window.innerWidth) * 360;
-            if (!seq.play) updatePitch(liveInput.angle);
+        function endTouch(e) {
+            let remaining = e.touches ? e.touches.length : 0;
+            if(remaining === 0) {
+                for(let id in voices) {
+                    voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                    setTimeout(() => { if(voices[id]) { voices[id].osc.stop(); delete voices[id]; } }, 200);
+                }
+                activeTouches = 0;
+            }
         }
 
-        canvas.addEventListener('mousemove', handleInput);
-        canvas.addEventListener('touchmove', handleInput);
-        canvas.addEventListener('mousedown', () => { setupEngine(); liveInput.active = true; });
-        canvas.addEventListener('touchstart', () => { setupEngine(); liveInput.active = true; });
-        window.addEventListener('mouseup', () => { liveInput.active = false; });
-        window.addEventListener('touchend', () => { liveInput.active = false; });
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', endTouch);
+        canvas.addEventListener('mousedown', handleTouch);
+        canvas.addEventListener('mousemove', (e) => { if(e.buttons) handleTouch(e); });
+        canvas.addEventListener('mouseup', endTouch);
 
         setInterval(() => {
-            if (osc && masterGain) {
-                let current = (seq.play && seq.data[seq.step]) ? seq.data[seq.step] : liveInput;
-                if (seq.rec && liveInput.active) seq.data[seq.step] = { a: liveInput.angle, p: liveInput.pressure };
-                if (seq.play) updatePitch(current.a);
+            // Update buckets and playback
+            document.querySelectorAll('.bucket').forEach(b => b.classList.remove('active'));
+            let activeBucket = document.getElementById('bucket-' + seq.step);
+            if(activeBucket) activeBucket.classList.add('active');
 
-                let targetVol = (seq.play || liveInput.active) ? document.getElementById('volSlider').value : 0;
-                masterGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
+            if(seq.data[seq.step]) document.getElementById('bucket-' + seq.step).classList.add('filled');
 
-                document.getElementById('hexDisplay').innerText = Math.floor(current.a).toString(16).toUpperCase();
-                document.getElementById('stepDisplay').innerText = `${String(seq.step).padStart(2, '0')}/64`;
-                seq.step = (seq.step + 1) % 64;
+            if(seq.play && seq.data[seq.step] && activeTouches === 0) {
+                let d = seq.data[seq.step];
+                if(!voices['seq']) voices['seq'] = createVoice('seq');
+                let range = mods.spring ? 1800 : 700;
+                let freq = mods.fae ? (range - (d.a * 1.8)) : (40 + (d.a * 1.8));
+                voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
+                voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
+            } else if (seq.play && !seq.data[seq.step] && voices['seq']) {
+                voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
             }
-        }, 50);
+
+            seq.step = (seq.step + 1) % 64;
+            document.getElementById('stepDisplay').innerText = seq.step;
+        }, 60);
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
-            gl.uniform1f(uLocs.time, time * 0.001);
-            gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0);
-            gl.uniform1f(uLocs.pres, liveInput.pressure);
-            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
-            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
-            gl.uniform1i(uLocs.active, (liveInput.active || seq.play) ? 1 : 0);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-            requestAnimationFrame(render);
+            gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1f(uLocs.pres, 0.5);
+            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0); gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
+            gl.uniform1i(uLocs.active, (activeTouches > 0 || seq.play) ? 1 : 0);
+            gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
         }
         requestAnimationFrame(render);
     </script>
