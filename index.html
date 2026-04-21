@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.36 - Hard-Snap Over-ride</title>
+    <title>CRi2 / MARIAH v1.37 - Safe Zone</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* GRID CALIBRATION: Dropped 250px to clear the header entirely */
+        /* GRID CALIBRATION: Dropped to 380px to ensure 2-bucket distance and top-wall clearance */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
-            width: 95%; max-width: 900px; margin: 250px auto 0 auto; pointer-events: auto;
+            width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
         }
         .bucket { aspect-ratio: 1/1; border: 2px solid #333; border-radius: 50%; background: #080808; }
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
@@ -21,7 +21,6 @@
         #controls { position: absolute; bottom: 40px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
         
-        /* High-Priority Buttons */
         .btn { 
             background: #000; border: 4px solid #0f0; color: #0f0; 
             padding: 20px 25px; cursor: pointer; text-transform: uppercase; 
@@ -40,7 +39,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.36 SNAP OVER-RIDE<br>IGNITE CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.37 SAFE ZONE<br>TAP TO START</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -81,7 +80,7 @@
         const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
         const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), pres: gl.getUniformLocation(program, "u_pressure"), wind: gl.getUniformLocation(program, "u_wind"), ring: gl.getUniformLocation(program, "u_ring"), active: gl.getUniformLocation(program, "u_active") };
+        const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), active: gl.getUniformLocation(program, "u_active") };
 
         let audioCtx = null, masterGain = null, ringOsc = null, ringGain = null;
         let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false, stick: false };
