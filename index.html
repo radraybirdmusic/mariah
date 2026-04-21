@@ -2,42 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.12 - Multi-Touch & Step Buckets</title>
+    <title>CRi2 / MARIAH v1.13 - Reaction Array</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 10px; box-sizing: border-box; }
         
-        /* THE BUCKET ARRAY (8x8 Grid for 64 Steps) */
+        /* THE BUCKET ARRAY (Now with "Boom" animations) */
         #bucket-grid { 
-            display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; 
-            width: 320px; background: rgba(0,20,0,0.8); padding: 10px; border: 1px solid #040; margin-bottom: 10px;
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
+            max-width: 500px; margin: 0 auto 10px auto; pointer-events: auto;
         }
-        .bucket { width: 12px; height: 12px; border: 1px solid #030; border-radius: 2px; background: #000; }
-        .bucket.filled { background: #f31; border-color: #f31; box-shadow: 0 0 5px #f31; }
-        .bucket.active { border-color: #0f0; background: #0f0; }
+        .bucket { 
+            width: 100%; pt: 100%; aspect-ratio: 1/1; border: 1px solid #030; 
+            border-radius: 50%; background: #000; transition: transform 0.1s;
+        }
+        .bucket.filled { border-color: #555; background: #111; }
+        /* The "Boom" recoil effect when playing */
+        .bucket.active { 
+            transform: scale(1.4); 
+            box-shadow: 0 0 15px currentColor;
+            z-index: 10;
+        }
 
-        #dashboard { font-size: 14px; background: rgba(0, 20, 0, 0.85); display: inline-block; padding: 12px; border: 2px solid #0f0; pointer-events: auto; }
+        #dashboard { font-size: 14px; background: rgba(0, 20, 0, 0.9); padding: 10px; border: 1px solid #0f0; margin-bottom: 5px; display: inline-block; pointer-events: auto; }
 
-        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: center; }
-        .row { display: flex; gap: 10px; }
+        /* THE BOTTOM COMMAND DECK */
+        #controls { 
+            position: absolute; bottom: 20px; left: 0; width: 100%;
+            display: flex; flex-direction: column; gap: 8px; pointer-events: auto; align-items: center; 
+        }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 
         .btn {
             background: #000; border: 2px solid #0f0; color: #0f0;
-            padding: 12px 20px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 14px; border-radius: 8px;
+            padding: 10px 18px; cursor: pointer; text-transform: uppercase; 
+            font-weight: 900; font-size: 13px; border-radius: 6px;
         }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 15px #0f0; }
-        .btn.kill { border-color: #f00; color: #f00; font-size: 18px; width: 100%; margin-bottom: 5px; }
+        .btn.rec { border-color: #f00; color: #f00; }
+        .btn.rec.active { background: #f00; color: #000; }
+        .btn.kill { border-color: #fff; color: #fff; background: #400; width: 200px; border-width: 3px; }
 
-        .slider-box { background: #111; padding: 5px 15px; border: 1px solid #444; border-radius: 8px; display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; margin-top:5px; }
-        input[type=range] { flex-grow: 1; accent-color: #0f0; cursor: pointer; }
+        .slider-box { background: #111; padding: 4px 10px; border: 1px solid #444; border-radius: 6px; display: flex; align-items: center; gap: 10px; width: 200px; }
+        input[type=range] { flex-grow: 1; accent-color: #0f0; }
 
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: flex; justify-content: center;
-            align-items: center; font-size: 24px; color: #0f0; z-index: 100; text-align: center; cursor: pointer;
+            align-items: center; font-size: 20px; color: #0f0; z-index: 100; text-align: center; cursor: pointer;
         }
     </style>
 
@@ -58,7 +72,7 @@
 
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
-            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.03, 0.0, 1.0); return; }
+            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.02, 0.0, 1.0); return; }
             float wind = (u_wind == 1) ? sin(u_time * 8.0) * 0.08 : 0.0;
             float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + wind);
             float line = smoothstep(0.025, 0.0, abs(uv.x - 0.5 + wiggle));
@@ -70,25 +84,21 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">v1.12 - SEXTANT MULTI-TOUCH<br>CLICK TO IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">CRi2 / MARIAH v1.13<br>IGNITE VORTEX</div>
 
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="dashboard">
-            HEX: 0x<span id="hexDisplay">00</span> | STEP: <span id="stepDisplay">00</span>
-            <div class="slider-box">
-                <span>VOL</span> <input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.1">
-            </div>
+            HEX: <span id="hexDisplay">00</span> | STEP: <span id="stepDisplay">00</span>
+            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.15"></div>
         </div>
 
         <div id="controls">
-            <button class="btn kill" onclick="killAudio()">!! KILL !!</button>
+            <button class="btn kill" onclick="killAudio()">!! KILL AUDIO !!</button>
             <div class="row">
-                <button id="btnRec" class="btn" style="color:#f00; border-color:#f00;" onclick="toggleSeq('rec')">REC</button>
+                <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
                 <button id="btnFae" class="btn" onclick="toggleMod('fae')">FAE</button>
-            </div>
-            <div class="row">
                 <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
                 <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
                 <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
@@ -103,15 +113,13 @@
         const gl = canvas.getContext('webgl');
         const bucketGrid = document.getElementById('bucket-grid');
         
-        // --- 1. BUILD THE 64 BUCKETS ---
+        // 1. Build Grid
         for(let i=0; i<64; i++) {
             let b = document.createElement('div');
-            b.className = 'bucket';
-            b.id = 'bucket-' + i;
+            b.className = 'bucket'; b.id = 'bucket-' + i;
             bucketGrid.appendChild(b);
         }
 
-        // --- SHADER SETUP ---
         function createShader(gl, type, source) {
             const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s;
         }
@@ -125,10 +133,8 @@
         gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
         const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), pres: gl.getUniformLocation(program, "u_pressure"), wind: gl.getUniformLocation(program, "u_wind"), ring: gl.getUniformLocation(program, "u_ring"), active: gl.getUniformLocation(program, "u_active") };
 
-        // --- MULTI-TOUCH AUDIO ENGINE ---
         let audioCtx = null, masterGain = null, ringOsc = null, ringGain = null;
-        let voices = {}; // Store oscillators for multiple fingers
-        let mods = { wind: false, spring: false, ring: false, fae: false };
+        let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false };
         let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
         let activeTouches = 0;
 
@@ -136,102 +142,90 @@
             document.getElementById('overlay').style.display = 'none';
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                masterGain = audioCtx.createGain();
-                masterGain.gain.value = 0.1;
-                masterGain.connect(audioCtx.destination);
+                masterGain = audioCtx.createGain(); masterGain.gain.value = 0.15; masterGain.connect(audioCtx.destination);
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
-                ringOsc.type = 'sine'; ringOsc.frequency.value = 40; 
-                ringOsc.connect(ringGain.gain); ringOsc.start();
+                ringOsc.type = 'sine'; ringOsc.frequency.value = 40; ringOsc.connect(ringGain.gain); ringOsc.start();
             }
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
         function createVoice(id) {
-            let o = audioCtx.createOscillator();
-            let g = audioCtx.createGain();
+            let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
             o.type = mods.fae ? 'triangle' : 'sawtooth';
-            g.gain.value = 0;
-            o.connect(g);
-            g.connect(mods.ring ? ringGain : masterGain);
+            g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if(mods.ring) ringGain.connect(masterGain);
-            o.start();
-            return { osc: o, gain: g };
+            o.start(); return { osc: o, gain: g };
         }
 
-        function killAudio() { if(audioCtx) { audioCtx.close().then(() => { audioCtx = null; location.reload(); }); } }
+        function killAudio() { if(audioCtx) { audioCtx.close().then(() => { location.reload(); }); } }
 
-        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active'); }
-        function toggleSeq(mode) { setupEngine(); 
+        function toggleMod(m) { 
+            setupEngine(); mods[m] = !mods[m]; 
+            const btn = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
+            if(btn) btn.classList.toggle('active'); 
+        }
+
+        function toggleSeq(mode) { 
+            setupEngine();
             if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; }
             if (mode === 'play') seq.play = !seq.play;
-            document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play);
+            document.getElementById('btnRec').classList.toggle('active', seq.rec);
+            document.getElementById('btnPlay').classList.toggle('active', seq.play);
         }
 
         function handleTouch(e) {
-            e.preventDefault();
-            setupEngine();
-            let touches = e.touches || [e];
-            activeTouches = touches.length;
-
+            e.preventDefault(); setupEngine();
+            let touches = e.touches || [e]; activeTouches = touches.length;
             for(let i=0; i<touches.length; i++) {
-                let t = touches[i];
-                let id = t.identifier || 0;
-                let x = t.clientX, y = t.clientY;
-                let angle = (x / window.innerWidth) * 360;
-                let pressure = y / window.innerHeight;
-
+                let t = touches[i], id = t.identifier || 0, x = t.clientX, y = t.clientY;
+                let angle = (x / window.innerWidth) * 360, pressure = y / window.innerHeight;
                 if(!voices[id]) voices[id] = createVoice(id);
-                
                 let range = mods.spring ? 1800 : 700;
                 let freq = mods.fae ? (range - (angle * 1.8)) : (40 + (angle * 1.8));
                 voices[id].osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, 0.1);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / activeTouches, audioCtx.currentTime, 0.05);
-
-                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure, active: true };
-                document.getElementById('hexDisplay').innerText = Math.floor(angle).toString(16).toUpperCase();
+                if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure, fae: mods.fae };
             }
         }
 
         function endTouch(e) {
-            let remaining = e.touches ? e.touches.length : 0;
-            if(remaining === 0) {
-                for(let id in voices) {
-                    voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-                    setTimeout(() => { if(voices[id]) { voices[id].osc.stop(); delete voices[id]; } }, 200);
-                }
+            if(!e.touches || e.touches.length === 0) {
+                for(let id in voices) { voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
                 activeTouches = 0;
             }
         }
 
-        canvas.addEventListener('touchstart', handleTouch);
-        canvas.addEventListener('touchmove', handleTouch);
-        canvas.addEventListener('touchend', endTouch);
-        canvas.addEventListener('mousedown', handleTouch);
-        canvas.addEventListener('mousemove', (e) => { if(e.buttons) handleTouch(e); });
-        canvas.addEventListener('mouseup', endTouch);
+        canvas.addEventListener('touchstart', handleTouch); canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', endTouch); canvas.addEventListener('mousedown', handleTouch);
+        canvas.addEventListener('mousemove', (e) => { if(e.buttons) handleTouch(e); }); canvas.addEventListener('mouseup', endTouch);
 
         setInterval(() => {
-            // Update buckets and playback
-            document.querySelectorAll('.bucket').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.color = 'transparent'; });
             let activeBucket = document.getElementById('bucket-' + seq.step);
-            if(activeBucket) activeBucket.classList.add('active');
-
-            if(seq.data[seq.step]) document.getElementById('bucket-' + seq.step).classList.add('filled');
-
-            if(seq.play && seq.data[seq.step] && activeTouches === 0) {
-                let d = seq.data[seq.step];
-                if(!voices['seq']) voices['seq'] = createVoice('seq');
-                let range = mods.spring ? 1800 : 700;
-                let freq = mods.fae ? (range - (d.a * 1.8)) : (40 + (d.a * 1.8));
-                voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
-                voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
-            } else if (seq.play && !seq.data[seq.step] && voices['seq']) {
+            
+            // Handle Playback & Recording Visuals
+            if(seq.data[seq.step]) {
+                activeBucket.classList.add('filled');
+                if(seq.play && activeTouches === 0) {
+                    let d = seq.data[seq.step];
+                    if(!voices['seq']) voices['seq'] = createVoice('seq');
+                    let range = mods.spring ? 1800 : 700;
+                    let freq = d.fae ? (range - (d.a * 1.8)) : (40 + (d.a * 1.8));
+                    voices['seq'].osc.type = d.fae ? 'triangle' : 'sawtooth';
+                    voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
+                    voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
+                    
+                    // THE BOOM: Color based on FAE state
+                    activeBucket.classList.add('active');
+                    activeBucket.style.color = d.fae ? '#0ff' : '#f31';
+                }
+            } else if (voices['seq']) {
                 voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
             }
 
             seq.step = (seq.step + 1) % 64;
             document.getElementById('stepDisplay').innerText = seq.step;
-        }, 60);
+        }, 80);
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
