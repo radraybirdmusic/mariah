@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.24 - Global Snap</title>
+    <title>CRi2 / MARIAH v1.25 - Hard Snap</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -24,7 +24,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.24 GLOBAL SNAP<br>TAP TO IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.25 HARD SNAP<br>IGNITE VORTEX</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -91,7 +91,7 @@
 
         function killAudio() { location.reload(); }
         
-        function setFreq(voice, angle) {
+        function setFreq(voice, angle, instant = false) {
             let maxFreq = mods.spring ? 2000 : 800;
             let minFreq = 40;
             let freq;
@@ -102,27 +102,32 @@
                 freq = minFreq + (angle / 360) * (maxFreq - minFreq);
                 voice.osc.type = mods.theremin ? 'sine' : 'sawtooth';
             }
-            voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
+            
+            // --- THE SNAP LOGIC ---
+            if (instant) {
+                voice.osc.frequency.cancelScheduledValues(audioCtx.currentTime);
+                voice.osc.frequency.setValueAtTime(Math.max(20, freq), audioCtx.currentTime);
+            } else {
+                voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
+            }
             voice.lastAngle = angle;
         }
 
         function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)); if(b) b.classList.toggle('active'); }
         
-        // --- THE SNAP LOGIC ---
         function toggleFae() {
             setupEngine();
             mods.fae = !mods.fae;
             document.getElementById('btnFae').classList.toggle('active');
-            // Immediate Audio Update for ALL active voices
+            // INSTANT PUNCH for all voices
             for (let id in voices) {
-                if (voices[id]) setFreq(voices[id], voices[id].lastAngle);
+                if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true);
             }
         }
 
         function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
         
         function angleToChakra(angle) { 
-            // Invert the Chakra Color if FAE is on
             let baseAngle = mods.fae ? (360 - angle) : angle;
             let hue = (baseAngle / 360) * 285; 
             return `hsl(${hue}, 100%, 50%)`; 
