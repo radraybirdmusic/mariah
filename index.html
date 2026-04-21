@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.54 - Audio Continuity</title>
+    <title>CRi2 / MARIAH v1.55 - Variable Tension</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -11,17 +11,25 @@
         .bucket { aspect-ratio: 1/1; border: 2px solid #333; border-radius: 50%; background: #080808; transition: transform 0.1s ease-out; }
         .bucket.filled { border-color: #555; }
         .bucket.active { transform: scale(1.8); z-index: 1000; box-shadow: 0 0 15px currentColor; }
-        #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
+        
+        #controls { 
+            position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); 
+            pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); 
+        }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 15px 20px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 16px; border-radius: 12px; min-width: 100px; touch-action: none; -webkit-user-select: none; user-select: none; }
+        
+        .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 15px 18px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 16px; border-radius: 12px; min-width: 90px; touch-action: none; -webkit-user-select: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 20px; margin-bottom: 5px; }
         .btn.oct { border-color: #0ff; color: #0ff; min-width: 80px; }
         .btn.fx { border-color: #ff0; color: #ff0; }
-        .btn.fx.active { background: #ff0 !important; color: #000 !important; }
-        .slider-box { background: #111; padding: 8px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 10px; width: 200px; }
-        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
+        .btn.step { min-width: 45px; padding: 15px 5px; border-color: #0f0; } /* Spring Adjusters */
+
+        /* LARGE VOLUME SLIDER */
+        .slider-box { background: #111; padding: 12px; border: 3px solid #0f0; border-radius: 12px; display: flex; align-items: center; gap: 10px; width: 260px; }
+        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 35px; }
+        
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 32px; color: #0f0; z-index: 100000; cursor: pointer; text-align: center; }
     </style>
 
@@ -31,12 +39,13 @@
 
     <script id="fs" type="x-shader/x-fragment">
         precision mediump float;
-        uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_wind; uniform int u_ring; uniform int u_spring; uniform int u_active;
+        uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_wind; uniform int u_ring; uniform float u_springTension; uniform int u_active;
         uniform int u_sat; uniform int u_bit; uniform float u_wah; uniform vec3 u_color;
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
-            float freq = (u_spring == 1) ? 70.0 : (20.0 + (1.0 - u_wah) * 40.0);
+            
+            float freq = 20.0 + (u_springTension * 0.5) + (1.0 - u_wah) * 40.0;
             float amp = 0.06;
             if(u_wind == 1) amp += sin(u_time * 25.0) * 0.12;
             float xOffset = sin(uv.y * freq + u_time * 12.0) * amp;
@@ -51,7 +60,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.54 AUDIO FIX<br>IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.55 VARIABLE SPRING<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -65,7 +74,9 @@
             <div class="row">
                 <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
                 <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
+                <button class="btn step" ontouchstart="adjustSpring(-10)">-</button>
                 <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring')">SPRING</button>
+                <button class="btn step" ontouchstart="adjustSpring(10)">+</button>
             </div>
             <div class="row">
                 <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow')">EBOW</button>
@@ -104,7 +115,7 @@
         const uLocs = { 
             time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), 
             fae: gl.getUniformLocation(program, "u_fae"), wind: gl.getUniformLocation(program, "u_wind"), 
-            ring: gl.getUniformLocation(program, "u_ring"), spring: gl.getUniformLocation(program, "u_spring"),
+            ring: gl.getUniformLocation(program, "u_ring"), springTension: gl.getUniformLocation(program, "u_springTension"),
             sat: gl.getUniformLocation(program, "u_sat"), bit: gl.getUniformLocation(program, "u_bit"),
             wah: gl.getUniformLocation(program, "u_wah"), color: gl.getUniformLocation(program, "u_color"),
             active: gl.getUniformLocation(program, "u_active") 
@@ -114,13 +125,12 @@
         let delayNode = null, filterNode = null;
         let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false, stick: false, sat: false, bit: false, wah: false, gran: false };
         let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
-        let liveActive = false, globalOctaveMultiplier = 1.0, currentHsl = [0, 1, 0.5];
+        let liveActive = false, globalOctaveMultiplier = 1.0, currentHsl = [0, 1, 0.5], springTension = 100;
 
         function setupEngine() {
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination);
-            
             satNode = audioCtx.createWaveShaper();
             function makeDistortionCurve(amount) {
                 let n_samples = 44100, curve = new Float32Array(n_samples);
@@ -132,15 +142,12 @@
             }
             satNode.curve = makeDistortionCurve(400);
             satNode.connect(masterGain);
-
             filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.Q.value = 15;
             filterNode.connect(satNode);
-
             delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3;
             let feedback = audioCtx.createGain(); feedback.gain.value = 0.6;
             delayNode.connect(feedback); feedback.connect(delayNode);
             delayNode.connect(filterNode);
-
             ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
             ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
             document.getElementById('overlay').style.display = 'none';
@@ -152,19 +159,25 @@
             let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), windLFO: audioCtx.createOscillator(), windDepth: audioCtx.createGain(), lastAngle: 180 };
             v.windLFO.frequency.value = 10; v.windDepth.gain.value = mods.wind ? 15 : 0;
             v.windLFO.connect(v.windDepth); v.windDepth.connect(v.osc.frequency); v.windLFO.start();
-            v.gain.gain.value = 0; v.osc.connect(v.gain); 
-            v.gain.connect(mods.gran ? delayNode : filterNode);
+            v.gain.gain.value = 0; v.osc.connect(v.gain); v.gain.connect(mods.gran ? delayNode : filterNode);
             v.osc.start(); return v;
         }
 
         function setFreq(v, angle, forceSnap = false) {
             if (!v || !v.osc) return;
-            let freq = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctaveMultiplier;
+            let range = mods.spring ? (springTension * 10) : 760;
+            let freq = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * range)) * globalOctaveMultiplier;
             v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
             if (forceSnap) { v.osc.frequency.setValueAtTime(freq, audioCtx.currentTime); } else { v.osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); }
             v.lastAngle = angle;
             let hue = ((angle / 360) * 285); if (mods.fae) hue = 285 - hue;
             currentHsl = hslToRgb(hue / 360, 1, 0.5);
+        }
+
+        function adjustSpring(amt) {
+            setupEngine();
+            springTension = Math.max(10, Math.min(500, springTension + amt));
+            if(mods.spring) { for (let id in voices) if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
         }
 
         function hslToRgb(h, s, l){
@@ -177,7 +190,7 @@
 
         function shiftOct(mult) { setupEngine(); globalOctaveMultiplier *= mult; for (let id in voices) if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
 
-        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); if(m === 'wah') filterNode.frequency.setTargetAtTime(mods.wah ? 600 : 20000, audioCtx.currentTime, 0.15); }
+        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); if(m === 'wah') filterNode.frequency.setTargetAtTime(mods.wah ? 600 : 20000, audioCtx.currentTime, 0.15); if(m === 'spring') { for (let id in voices) if (voices[id]) setFreq(voices[id], voices[id].lastAngle, true); } }
         function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); }); }
         function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
 
@@ -217,7 +230,7 @@
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
             gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
             gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
-            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0); gl.uniform1i(uLocs.spring, mods.spring ? 1 : 0);
+            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0); gl.uniform1f(uLocs.springTension, mods.spring ? springTension : 0.0);
             gl.uniform1i(uLocs.sat, mods.sat ? 1 : 0); gl.uniform1i(uLocs.bit, mods.bit ? 1 : 0);
             gl.uniform1f(uLocs.wah, mods.wah ? 1.0 : 0.0);
             gl.uniform3f(uLocs.color, currentHsl[0], currentHsl[1], currentHsl[2]);
