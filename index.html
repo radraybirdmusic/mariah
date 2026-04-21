@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.45 - Hard-Pinned Floor</title>
+    <title>CRi2 / MARIAH v1.46 - Cumulative Visuals</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
-        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* BUCKETS LOCKED AT 380PX */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
             width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
@@ -18,43 +16,21 @@
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
         
-        /* THE HARD-PINNED FLOOR: Fixed ignores everything else and sticks to the viewport bottom */
         #controls { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%; 
-            padding-bottom: env(safe-area-inset-bottom, 20px); /* iPhone Home Bar clearance */
-            pointer-events: auto; 
-            display: flex; 
-            flex-direction: column-reverse; 
-            gap: 8px; 
-            align-items: center; 
-            z-index: 9999; 
-            background: rgba(0,0,0,0.7); /* Backing to prevent vortex bleed-through */
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+            pointer-events: auto; display: flex; flex-direction: column-reverse; 
+            gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.7);
         }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
-        
-        .btn { 
-            background: #000; border: 4px solid #0f0; color: #0f0; 
-            padding: 18px 22px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 18px; border-radius: 12px; min-width: 120px;
-            touch-action: none; -webkit-user-select: none; user-select: none;
-        }
+        .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 18px 22px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 12px; min-width: 120px; touch-action: none; -webkit-user-select: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00 !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 22px; margin-bottom: 5px; }
-        
         .slider-box { background: #111; padding: 8px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 330px; margin-bottom: 10px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 25px; }
-        
-        #overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.98); display: flex; justify-content: center; 
-            align-items: center; font-size: 32px; color: #0f0; z-index: 100000; 
-            cursor: pointer; text-align: center; 
-        }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; justify-content: center; align-items: center; font-size: 32px; color: #0f0; z-index: 100000; cursor: pointer; text-align: center; }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -75,11 +51,21 @@
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
-            float tension = (u_spring == 1) ? 45.0 : 18.0;
-            float windEffect = (u_wind == 1) ? sin(u_time * 25.0) * 0.18 : 0.0;
-            float wave = sin(uv.y * tension + u_time * 6.0) * (0.05 + windEffect);
-            float dist = abs(uv.x - 0.5 + wave);
-            if(u_ring == 1) dist += step(0.5, fract(uv.y * 120.0 + u_time * 50.0)) * 0.03;
+            
+            // CUMULATIVE MATH
+            float freq = (u_spring == 1) ? 50.0 : 15.0;
+            float amp = 0.05;
+            if(u_wind == 1) amp += sin(u_time * 20.0) * 0.1;
+            
+            float xOffset = sin(uv.y * freq + u_time * 8.0) * amp;
+            float dist = abs(uv.x - 0.5 + xOffset);
+            
+            // RING MOD DESTRUCTION
+            if(u_ring == 1) {
+                float noise = step(0.5, fract(uv.y * 150.0 + u_time * 60.0));
+                dist += noise * 0.04;
+            }
+            
             float line = smoothstep(0.04, 0.0, dist);
             vec3 color = (u_fae == 1) ? vec3(0.0, 1.0, 1.0) : vec3(1.0, 0.2, 0.1);
             gl_FragColor = vec4(color * line, line + 0.1);
@@ -87,7 +73,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.45 PINNED FLOOR<br>IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.46 CUMULATIVE VISUALS<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -128,12 +114,9 @@
         const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
         
         const uLocs = { 
-            time: gl.getUniformLocation(program, "u_time"), 
-            res: gl.getUniformLocation(program, "u_resolution"), 
-            fae: gl.getUniformLocation(program, "u_fae"), 
-            wind: gl.getUniformLocation(program, "u_wind"), 
-            ring: gl.getUniformLocation(program, "u_ring"), 
-            spring: gl.getUniformLocation(program, "u_spring"), 
+            time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), 
+            fae: gl.getUniformLocation(program, "u_fae"), wind: gl.getUniformLocation(program, "u_wind"), 
+            ring: gl.getUniformLocation(program, "u_ring"), spring: gl.getUniformLocation(program, "u_spring"), 
             active: gl.getUniformLocation(program, "u_active") 
         };
 
@@ -152,11 +135,9 @@
         }
 
         function killAudio() { window.location.reload(true); }
-
         function createVoice() {
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
-            g.gain.value = 0; o.connect(g);
-            g.connect(mods.ring ? ringGain : masterGain);
+            g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
             o.start(); return { osc: o, gain: g, lastAngle: 180 };
         }
@@ -167,47 +148,22 @@
             let minFreq = 40;
             let freq = mods.fae ? (maxFreq - (angle / 360) * (maxFreq - minFreq)) : (minFreq + (angle / 360) * (maxFreq - minFreq));
             voice.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-            if (forceSnap) {
-                voice.osc.frequency.cancelScheduledValues(audioCtx.currentTime);
-                voice.osc.frequency.setValueAtTime(Math.max(20, freq), audioCtx.currentTime);
-            } else {
-                voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
-            }
+            if (forceSnap) { voice.osc.frequency.cancelScheduledValues(audioCtx.currentTime); voice.osc.frequency.setValueAtTime(Math.max(20, freq), audioCtx.currentTime);
+            } else { voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); }
             voice.lastAngle = angle;
         }
 
-        function toggleMod(m) { 
-            setupEngine(); mods[m] = !mods[m]; 
-            document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
-            for (let id in voices) if (voices[id]) { voices[id].gain.disconnect(); voices[id].gain.connect(mods.ring ? ringGain : masterGain); }
-        }
-        
-        function toggleFae() {
-            setupEngine(); mods.fae = !mods.fae;
-            document.getElementById('btnFae').classList.toggle('active', mods.fae);
-            Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); });
-        }
-
-        function toggleSeq(mode) { 
-            setupEngine(); 
-            if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } 
-            if (mode === 'play') seq.play = !seq.play; 
-            document.getElementById('btnRec').classList.toggle('active', seq.rec); 
-            document.getElementById('btnPlay').classList.toggle('active', seq.play); 
-        }
-
+        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); for (let id in voices) if (voices[id]) { voices[id].gain.disconnect(); voices[id].gain.connect(mods.ring ? ringGain : masterGain); } }
+        function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); }); }
+        function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
         function angleToChakra(angle) { let eff = mods.fae ? (360 - angle) : angle; return `hsl(${(eff / 360) * 285}, 100%, 50%)`; }
 
         function handleInput(e) {
-            setupEngine();
-            if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
-            liveActive = true;
-            let touches = e.touches || [e];
+            setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
+            liveActive = true; let touches = e.touches || [e];
             for(let i=0; i<touches.length; i++) {
-                let t = touches[i], id = t.identifier || 0;
-                let angle = (t.clientX / window.innerWidth) * 360;
-                if(!voices[id]) voices[id] = createVoice();
-                setFreq(voices[id], angle);
+                let t = touches[i], id = t.identifier || 0; let angle = (t.clientX / window.innerWidth) * 360;
+                if(!voices[id]) voices[id] = createVoice(); setFreq(voices[id], angle);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
                 if(seq.rec) seq.data[seq.step] = { a: angle, p: t.clientY / window.innerHeight };
             }
@@ -215,12 +171,11 @@
 
         function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
 
-        canvas.addEventListener('mousedown', handleInput);
-        window.addEventListener('mouseup', stopInput);
-        canvas.addEventListener('mousemove', (e) => { if(e.buttons === 1) handleInput(e); });
         canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
         canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
         canvas.addEventListener('touchend', stopInput);
+        canvas.addEventListener('mousedown', handleInput);
+        window.addEventListener('mouseup', stopInput);
 
         setInterval(() => {
             document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
@@ -239,12 +194,9 @@
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
-            gl.uniform1f(uLocs.time, time * 0.001); 
-            gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); 
-            gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
-            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
-            gl.uniform1i(uLocs.spring, mods.spring ? 1 : 0);
+            gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+            gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0);
+            gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0); gl.uniform1i(uLocs.spring, mods.spring ? 1 : 0);
             gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
         }
