@@ -2,35 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.23 - Mirror Inversion</title>
+    <title>CRi2 / MARIAH v1.24 - Global Snap</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        
-        /* Buckets dropped 160px for clearance */
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; width: 90%; max-width: 900px; margin: 160px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; }
         .bucket.filled { border: 1px solid #444; background: #111; }
         .bucket.active { transform: scale(1.8); z-index: 10; }
-        
         #controls { position: absolute; bottom: 60px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
-        
         .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 18px 25px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 12px; min-width: 140px; }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00; color: #000; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 22px; }
-        
         .slider-box { background: #111; padding: 10px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 20px; }
-        
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; text-align: center; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.23 MIRROR WORLD<br>TAP TO IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.24 GLOBAL SNAP<br>TAP TO IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -38,7 +32,7 @@
             <div class="row">
                 <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
-                <button id="btnFae" class="btn" onclick="toggleMod('fae')">FAE</button>
+                <button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
                 <button id="btnStick" class="btn" onclick="toggleMod('stick')">STICK</button>
             </div>
             <div class="row">
@@ -92,31 +86,46 @@
             let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
             g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
-            o.start(); return { osc: o, gain: g };
+            o.start(); return { osc: o, gain: g, lastAngle: 180 };
         }
 
         function killAudio() { location.reload(); }
-        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)); if(b) b.classList.toggle('active'); }
-        function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
-        function angleToChakra(angle) { let hue = (angle / 360) * 285; return `hsl(${hue}, 100%, 50%)`; }
-
-        // --- PITCH ENGINE CORE ---
-        function setFrequency(voice, angle) {
+        
+        function setFreq(voice, angle) {
             let maxFreq = mods.spring ? 2000 : 800;
             let minFreq = 40;
             let freq;
-
             if (mods.fae) {
-                // BIT-FLIPPED MIRROR: High becomes Low, Low becomes High
                 freq = maxFreq - (angle / 360) * (maxFreq - minFreq);
                 voice.osc.type = mods.theremin ? 'sine' : 'triangle';
             } else {
-                // LIGHT REALITY
                 freq = minFreq + (angle / 360) * (maxFreq - minFreq);
                 voice.osc.type = mods.theremin ? 'sine' : 'sawtooth';
             }
-
             voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
+            voice.lastAngle = angle;
+        }
+
+        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)); if(b) b.classList.toggle('active'); }
+        
+        // --- THE SNAP LOGIC ---
+        function toggleFae() {
+            setupEngine();
+            mods.fae = !mods.fae;
+            document.getElementById('btnFae').classList.toggle('active');
+            // Immediate Audio Update for ALL active voices
+            for (let id in voices) {
+                if (voices[id]) setFreq(voices[id], voices[id].lastAngle);
+            }
+        }
+
+        function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
+        
+        function angleToChakra(angle) { 
+            // Invert the Chakra Color if FAE is on
+            let baseAngle = mods.fae ? (360 - angle) : angle;
+            let hue = (baseAngle / 360) * 285; 
+            return `hsl(${hue}, 100%, 50%)`; 
         }
 
         function handleInput(e) {
@@ -126,7 +135,7 @@
                 let t = touches[i], id = t.identifier || 0;
                 let angle = (t.clientX / window.innerWidth) * 360;
                 if(!voices[id]) voices[id] = createVoice();
-                setFrequency(voices[id], angle);
+                setFreq(voices[id], angle);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / touches.length, audioCtx.currentTime, 0.05);
                 if(seq.rec) seq.data[seq.step] = { a: angle, p: t.clientY / window.innerHeight };
             }
@@ -144,7 +153,7 @@
                 ab.classList.add('filled');
                 if(seq.play && !liveActive) {
                     let d = seq.data[seq.step]; if(!voices['seq']) voices['seq'] = createVoice();
-                    setFrequency(voices['seq'], d.a);
+                    setFreq(voices['seq'], d.a);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
                     let color = angleToChakra(d.a); ab.classList.add('active'); ab.style.backgroundColor = color; ab.style.boxShadow = `0 0 45px ${color}`;
                 }
