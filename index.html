@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.38 - Crisp Command</title>
+    <title>CRi2 / MARIAH v1.39 - Hammer-On</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* BUCKETS LOCKED - DO NOT TOUCH */
+        /* BUCKETS - LOCKED AT 380PX */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; 
             width: 95%; max-width: 900px; margin: 380px auto 0 auto; pointer-events: auto;
@@ -18,20 +18,16 @@
         .bucket.filled { border: 1px solid #555; background: #1a1a1a; }
         .bucket.active { transform: scale(1.8); z-index: 1000; transition: none; }
         
-        #controls { 
-            position: absolute; bottom: 40px; left: 0; width: 100%; 
-            pointer-events: auto; /* Always hot */
-            display: flex; flex-direction: column; gap: 8px; align-items: center; 
-            z-index: 500; 
-        }
+        #controls { position: absolute; bottom: 40px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: 999; }
         .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
         
         .btn { 
             background: #000; border: 4px solid #0f0; color: #0f0; 
             padding: 20px 25px; cursor: pointer; text-transform: uppercase; 
             font-weight: 900; font-size: 20px; border-radius: 12px; min-width: 130px;
-            /* Instant response, no funny business */
-            -webkit-tap-highlight-color: transparent;
+            /* DISABLE BROWSER DELAYS */
+            touch-action: none;
+            -webkit-user-select: none;
             user-select: none;
         }
         .btn.active { background: #0f0 !important; color: #000 !important; }
@@ -46,27 +42,27 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.38 CRISP COMMAND<br>TAP TO START</div>
+    <div id="overlay" ontouchstart="setupEngine()" onclick="setupEngine()">v1.39 HAMMER-ON<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
             <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
             <div class="row">
-                <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
-                <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
-                <button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
-                <button id="btnStick" class="btn" onclick="toggleMod('stick')">STICK</button>
+                <button id="btnRec" class="btn rec" ontouchstart="toggleSeq('rec')">REC</button>
+                <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play')">PLAY</button>
+                <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
+                <button id="btnStick" class="btn" ontouchstart="toggleMod('stick')">STICK</button>
             </div>
             <div class="row">
-                <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
-                <button id="btnTheremin" class="btn" onclick="toggleMod('theremin')">THEREMIN</button>
-                <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
+                <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow')">EBOW</button>
+                <button id="btnTheremin" class="btn" ontouchstart="toggleMod('theremin')">THEREMIN</button>
+                <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring')">SPRING</button>
             </div>
             <div class="row">
-                <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
-                <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
+                <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
+                <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
             </div>
-            <button class="btn kill" onclick="killAudio()">!! EMERGENCY KILL !!</button>
+            <button class="btn kill" ontouchstart="killAudio()">!! EMERGENCY KILL !!</button>
         </div>
     </div>
     <canvas id="vortexCanvas"></canvas>
@@ -125,9 +121,9 @@
             voice.lastAngle = angle;
         }
 
+        // --- HAMMER-ON TOGGLES ---
         function toggleMod(m) { 
-            setupEngine(); 
-            mods[m] = !mods[m]; 
+            setupEngine(); mods[m] = !mods[m]; 
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
         }
         
@@ -138,13 +134,19 @@
             Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); });
         }
 
-        function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
+        function toggleSeq(mode) { 
+            setupEngine(); 
+            if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } 
+            if (mode === 'play') seq.play = !seq.play; 
+            document.getElementById('btnRec').classList.toggle('active', seq.rec); 
+            document.getElementById('btnPlay').classList.toggle('active', seq.play); 
+        }
+
         function angleToChakra(angle) { let eff = mods.fae ? (360 - angle) : angle; return `hsl(${(eff / 360) * 285}, 100%, 50%)`; }
 
         function handleInput(e) {
             setupEngine();
-            // IGNORE IF TOUCHING UI
-            if (e.target.closest('#controls') || e.target.closest('#bucket-grid')) return;
+            if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
             liveActive = true;
             let touches = e.touches || [e];
             for(let i=0; i<touches.length; i++) {
@@ -163,22 +165,17 @@
         window.addEventListener('mouseup', stopInput);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons === 1) handleInput(e); });
         canvas.addEventListener('touchstart', (e) => { 
-            // Only prevent default if we AREN'T touching a button
-            if (e.target.id === 'vortexCanvas') e.preventDefault(); 
+            if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); 
             handleInput(e); 
         }, {passive: false});
         canvas.addEventListener('touchmove', (e) => { 
-            if (e.target.id === 'vortexCanvas') e.preventDefault(); 
+            if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); 
             handleInput(e); 
         }, {passive: false});
         canvas.addEventListener('touchend', stopInput);
 
         setInterval(() => {
-            document.querySelectorAll('.bucket').forEach(b => { 
-                b.classList.remove('active'); 
-                b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; 
-                b.style.boxShadow = 'none'; 
-            });
+            document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
             let ab = document.getElementById('bucket-' + seq.step);
             if(seq.data[seq.step]) {
                 ab.classList.add('filled');
