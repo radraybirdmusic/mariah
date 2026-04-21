@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.46 - Cumulative Visuals</title>
+    <title>CRi2 / MARIAH v1.47 - Turbulent Audio</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -52,7 +52,6 @@
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
             
-            // CUMULATIVE MATH
             float freq = (u_spring == 1) ? 50.0 : 15.0;
             float amp = 0.05;
             if(u_wind == 1) amp += sin(u_time * 20.0) * 0.1;
@@ -60,7 +59,6 @@
             float xOffset = sin(uv.y * freq + u_time * 8.0) * amp;
             float dist = abs(uv.x - 0.5 + xOffset);
             
-            // RING MOD DESTRUCTION
             if(u_ring == 1) {
                 float noise = step(0.5, fract(uv.y * 150.0 + u_time * 60.0));
                 dist += noise * 0.04;
@@ -73,7 +71,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.46 CUMULATIVE VISUALS<br>IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.47 TURBULENT AUDIO<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -135,11 +133,24 @@
         }
 
         function killAudio() { window.location.reload(true); }
+
         function createVoice() {
-            let o = audioCtx.createOscillator(); let g = audioCtx.createGain();
+            let o = audioCtx.createOscillator(); 
+            let g = audioCtx.createGain();
+            let windLFO = audioCtx.createOscillator();
+            let windDepth = audioCtx.createGain();
+
+            windLFO.frequency.value = 8 + Math.random() * 4;
+            windDepth.gain.value = mods.wind ? 15 : 0;
+            
+            windLFO.connect(windDepth);
+            windDepth.connect(o.frequency);
+            windLFO.start();
+
             g.gain.value = 0; o.connect(g); g.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
-            o.start(); return { osc: o, gain: g, lastAngle: 180 };
+            
+            o.start(); return { osc: o, gain: g, lastAngle: 180, windLFO, windDepth };
         }
 
         function setFreq(voice, angle, forceSnap = false) {
@@ -148,12 +159,32 @@
             let minFreq = 40;
             let freq = mods.fae ? (maxFreq - (angle / 360) * (maxFreq - minFreq)) : (minFreq + (angle / 360) * (maxFreq - minFreq));
             voice.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-            if (forceSnap) { voice.osc.frequency.cancelScheduledValues(audioCtx.currentTime); voice.osc.frequency.setValueAtTime(Math.max(20, freq), audioCtx.currentTime);
-            } else { voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); }
+            
+            if (forceSnap) { 
+                voice.osc.frequency.cancelScheduledValues(audioCtx.currentTime); 
+                voice.osc.frequency.setValueAtTime(Math.max(20, freq), audioCtx.currentTime);
+            } else { 
+                voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); 
+            }
             voice.lastAngle = angle;
         }
 
-        function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); for (let id in voices) if (voices[id]) { voices[id].gain.disconnect(); voices[id].gain.connect(mods.ring ? ringGain : masterGain); } }
+        function toggleMod(m) { 
+            setupEngine(); 
+            mods[m] = !mods[m]; 
+            document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
+            
+            for (let id in voices) {
+                if (voices[id]) {
+                    if (m === 'wind') voices[id].windDepth.gain.setTargetAtTime(mods.wind ? 20 : 0, audioCtx.currentTime, 0.1);
+                    if (m === 'ring') {
+                        voices[id].gain.disconnect();
+                        voices[id].gain.connect(mods.ring ? ringGain : masterGain);
+                    }
+                }
+            }
+        }
+        
         function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); Object.values(voices).forEach(v => { if (v) setFreq(v, v.lastAngle, true); }); }
         function toggleSeq(mode) { setupEngine(); if (mode === 'rec') { seq.rec = !seq.rec; if(seq.rec) seq.step = 0; } if (mode === 'play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
         function angleToChakra(angle) { let eff = mods.fae ? (360 - angle) : angle; return `hsl(${(eff / 360) * 285}, 100%, 50%)`; }
