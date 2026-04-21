@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.56d - Kinetic Engine (XL UI)</title>
+    <title>CRi2 / MARIAH v1.58 - Kinetic Engine</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -12,8 +12,11 @@
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; 
             width: 98%; max-width: 1200px; margin: 20px auto 0 auto; pointer-events: auto;
         }
-        .bucket { aspect-ratio: 1/1; border: 1px solid #333; border-radius: 50%; background: #080808; transition: transform 0.1s; }
-        .bucket.active { transform: scale(2.0); z-index: 1000; box-shadow: 0 0 15px currentColor; }
+        .bucket { aspect-ratio: 1/1; border: 1px solid #333; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
+        .bucket.active { transform: scale(1.5); z-index: 1000; box-shadow: 0 0 15px currentColor; }
+        
+        /* v1.58 Playhead Highlight */
+        .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 10px #fff; z-index: 50; }
         
         #controls { 
             position: fixed; bottom: 0; left: 0; width: 100%; 
@@ -23,12 +26,30 @@
         }
         .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
         
+        /* Top Row Buttons (Large) */
         .btn { 
             background: #000; border: 4px solid #0f0; color: #0f0; 
             padding: 24px 30px; cursor: pointer; text-transform: uppercase; 
             font-weight: 900; font-size: 28px; border-radius: 15px; 
             min-width: 170px; touch-action: none; user-select: none; 
         }
+
+        /* iPad Optimization: Lower 3 rows at 1/2 size */
+        .row:nth-child(-n+3) .btn {
+            padding: 12px 15px;
+            font-size: 14px;
+            min-width: 85px;
+            border-width: 2px;
+            border-radius: 8px;
+        }
+        .row:nth-child(-n+3) .slider-box {
+            width: 200px;
+            padding: 10px;
+            border-width: 2px;
+        }
+        .row:nth-child(-n+3) input[type=range] { height: 30px; }
+        .row:nth-child(-n+3) .btn.step { min-width: 40px; padding: 12px 5px; }
+
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.fx { border-color: #ff0; color: #ff0; }
         .btn.fx.active { background: #ff0 !important; color: #000 !important; }
@@ -47,7 +68,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.56 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.58 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -156,31 +177,26 @@
             curve[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); 
         }
         satNode.curve = curve; satNode.connect(masterGain);
-
         filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.connect(satNode);
-        
         delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3;
         let fb = audioCtx.createGain(); fb.gain.value = 0.5;
         delayNode.connect(fb); fb.connect(delayNode); delayNode.connect(filterNode);
-
         ghostGain = audioCtx.createGain(); ghostGain.gain.value = 0;
         let bufferSize = 2 * audioCtx.sampleRate, noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), output = noiseBuffer.getChannelData(0);
         for (let i=0; i<bufferSize; i++) output[i] = Math.random() * 2 - 1;
         whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
         whiteNoise.connect(ghostGain); ghostGain.connect(filterNode); whiteNoise.start();
-
         ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
         ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
         document.getElementById('overlay').style.display = 'none';
 
-        // Direct event listener for volume slider to ensure it works across all browsers
         document.getElementById('volSlider').addEventListener('input', function() {
             if(masterGain) masterGain.gain.setTargetAtTime(this.value, audioCtx.currentTime, 0.02);
         });
     }
 
     function createVoice() {
-        let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180, lastX: 0, lastY: 0, lastTime: 0 };
+        let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
         v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0;
         v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
         v.gain.gain.value = 0; v.osc.connect(v.gain); v.gain.connect(mods.gran ? delayNode : filterNode);
@@ -216,25 +232,16 @@
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
         liveActive = true; let touches = e.touches || [e];
-        if (mods.frac && touches.length >= 2) {
-            let d = Math.abs(touches[0].clientX - touches[1].clientX);
-            if (d < 50) ghostGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-        }
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0; let angle = (t.clientX / window.innerWidth) * 360;
             if(!voices[id]) voices[id] = createVoice();
-            if (mods.whir) {
-                let vel = Math.abs(t.clientX - (voices[id].lastX||0)) / (performance.now() - (voices[id].lastTime||0));
-                if (vel > 2) { angle += Math.random() * 20; ghostGain.gain.setValueAtTime(vel * 0.1, audioCtx.currentTime); }
-            }
             setFreq(voices[id], angle);
             voices[id].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-            voices[id].lastX = t.clientX; voices[id].lastTime = performance.now();
             if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})` };
         }
     }
 
-    function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; if(!mods.ghst) ghostGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5); } }
+    function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
 
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
 
@@ -242,48 +249,38 @@
     canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchend', stopInput);
 
-// --- REPLACE YOUR EXISTING setInterval BLOCK WITH THIS REVISED VERSION ---
+    // v1.58 Sequencer Engine
+    setInterval(() => {
+        if (!audioCtx) return;
+        
+        // Visual Cleanup
+        document.querySelectorAll('.bucket').forEach(b => { 
+            b.classList.remove('active'); 
+            b.classList.remove('playhead'); 
+            if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; 
+        });
 
-setInterval(() => {
-    // 1. Reset all buckets to default state
-    document.querySelectorAll('.bucket').forEach(b => { 
-        b.classList.remove('active'); 
-        if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; 
-    });
+        // Track Highlight
+        let ab = document.getElementById('bucket-' + seq.step);
+        if(ab) ab.classList.add('playhead');
 
-    let activeBucket = document.getElementById('bucket-' + seq.step);
-    let stepData = seq.data[seq.step];
-
-    if(stepData) {
-        // Mark bucket as having data
-        activeBucket.classList.add('filled'); 
-        activeBucket.style.backgroundColor = stepData.c;
-
-        if(seq.play) {
-            // Ensure sequencer voice exists
-            if(!voices['seq']) voices['seq'] = createVoice();
+        // Playback Logic
+        if(seq.data[seq.step]) {
+            let d = seq.data[seq.step]; 
+            if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
             
-            // Critical: Update the Global Frequency and Color for the Shader
-            setFreq(voices['seq'], stepData.a);
-            
-            // Trigger Voice Gain
-            voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-            
-            // Visual feedback for the current playing step
-            activeBucket.classList.add('active');
-            activeBucket.style.color = stepData.c;
+            if(seq.play) {
+                if(!voices['seq']) voices['seq'] = createVoice();
+                setFreq(voices['seq'], d.a);
+                voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.02);
+                if(ab) ab.classList.add('active');
+            }
+        } else {
+            if(voices['seq']) voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
         }
-    } else {
-        // If the step is empty and we are playing, kill the sequencer voice gain
-        if(seq.play && voices['seq']) {
-            voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-        }
-    }
-
-    // Increment step
-    seq.step = (seq.step + 1) % 64;
-}, 80);
-    
+        
+        seq.step = (seq.step + 1) % 64;
+    }, 125); 
 
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
@@ -299,4 +296,3 @@ setInterval(() => {
 </script>
 </body>
 </html>
-
