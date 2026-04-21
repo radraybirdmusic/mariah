@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.48 - Octave Hammers</title>
+    <title>CRi2 / MARIAH v1.49 - Pitch Push</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -57,19 +57,16 @@
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
             
-            float freq = (u_spring == 1) ? 55.0 : 18.0;
-            float amp = (u_octDown == 1 || u_octUp == 1) ? 0.08 : 0.05;
-            if(u_wind == 1) amp += sin(u_time * 20.0) * 0.12;
+            float freq = (u_spring == 1) ? 60.0 : 20.0;
+            float amp = (u_octDown == 1) ? 0.03 : (u_octUp == 1 ? 0.08 : 0.05);
+            if(u_wind == 1) amp += sin(u_time * 25.0) * 0.1;
             
-            float xOffset = sin(uv.y * freq + u_time * 8.0) * amp;
+            float xOffset = sin(uv.y * freq + u_time * 10.0) * amp;
             float dist = abs(uv.x - 0.5 + xOffset);
             
-            if(u_ring == 1) dist += step(0.5, fract(uv.y * 140.0 + u_time * 60.0)) * 0.04;
+            if(u_ring == 1) dist += step(0.5, fract(uv.y * 150.0 + u_time * 70.0)) * 0.04;
             
-            float weight = 0.04;
-            if(u_octDown == 1) weight += 0.02;
-            if(u_octUp == 1) weight += 0.01;
-
+            float weight = (u_octDown == 1) ? 0.07 : (u_octUp == 1 ? 0.03 : 0.05);
             float line = smoothstep(weight, 0.0, dist);
             vec3 color = (u_fae == 1) ? vec3(0.0, 1.0, 1.0) : vec3(1.0, 0.2, 0.1);
             gl_FragColor = vec4(color * line, line + 0.1);
@@ -77,7 +74,7 @@
     </script>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.48 OCTAVE HAMMERS<br>IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.49 PITCH PUSH<br>IGNITE</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -148,36 +145,24 @@
         function createVoice() {
             let v = {
                 osc: audioCtx.createOscillator(),
-                sub: audioCtx.createOscillator(),
-                high: audioCtx.createOscillator(),
                 gain: audioCtx.createGain(),
-                subGain: audioCtx.createGain(),
-                highGain: audioCtx.createGain(),
                 windLFO: audioCtx.createOscillator(),
                 windDepth: audioCtx.createGain(),
                 lastAngle: 180
             };
 
-            v.windLFO.frequency.value = 9;
+            v.windLFO.frequency.value = 10;
             v.windDepth.gain.value = mods.wind ? 15 : 0;
             v.windLFO.connect(v.windDepth);
             v.windDepth.connect(v.osc.frequency);
-            v.windDepth.connect(v.sub.frequency);
-            v.windDepth.connect(v.high.frequency);
             v.windLFO.start();
 
             v.gain.gain.value = 0;
-            v.subGain.gain.value = mods.octDown ? 0.6 : 0;
-            v.highGain.gain.value = mods.octUp ? 0.4 : 0;
-
             v.osc.connect(v.gain);
-            v.sub.connect(v.subGain); v.subGain.connect(v.gain);
-            v.high.connect(v.highGain); v.highGain.connect(v.gain);
-            
             v.gain.connect(mods.ring ? ringGain : masterGain);
             if (mods.ring) ringGain.connect(masterGain);
 
-            v.osc.start(); v.sub.start(); v.high.start();
+            v.osc.start();
             return v;
         }
 
@@ -186,19 +171,18 @@
             let maxFreq = mods.spring ? 2000 : 800;
             let minFreq = 40;
             let freq = mods.fae ? (maxFreq - (angle / 360) * (maxFreq - minFreq)) : (minFreq + (angle / 360) * (maxFreq - minFreq));
-            let type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
             
-            v.osc.type = type; v.sub.type = type; v.high.type = type;
+            // THE PUSH: Multiply the frequency before sending it to the oscillator
+            if (mods.octDown) freq *= 0.5;
+            if (mods.octUp) freq *= 2.0;
+
+            v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
 
             if (forceSnap) { 
-                [v.osc, v.sub, v.high].forEach(o => o.frequency.cancelScheduledValues(audioCtx.currentTime));
+                v.osc.frequency.cancelScheduledValues(audioCtx.currentTime);
                 v.osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                v.sub.frequency.setValueAtTime(freq / 2, audioCtx.currentTime);
-                v.high.frequency.setValueAtTime(freq * 2, audioCtx.currentTime);
             } else { 
                 v.osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); 
-                v.sub.frequency.setTargetAtTime(freq / 2, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); 
-                v.high.frequency.setTargetAtTime(freq * 2, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05); 
             }
             v.lastAngle = angle;
         }
@@ -206,12 +190,16 @@
         function toggleMod(m) { 
             setupEngine(); mods[m] = !mods[m]; 
             document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1)).classList.toggle('active', mods[m]); 
+            // If Octave Down is toggled, ensure Octave Up is off (and vice versa) to keep it a pure "push"
+            if (m === 'octDown' && mods.octDown) { mods.octUp = false; document.getElementById('btnOctUp').classList.remove('active'); }
+            if (m === 'octUp' && mods.octUp) { mods.octDown = false; document.getElementById('btnOctDown').classList.remove('active'); }
+
             for (let id in voices) {
                 let v = voices[id]; if(!v) continue;
                 if (m === 'wind') v.windDepth.gain.setTargetAtTime(mods.wind ? 20 : 0, audioCtx.currentTime, 0.1);
-                if (m === 'octDown') v.subGain.gain.setTargetAtTime(mods.octDown ? 0.7 : 0, audioCtx.currentTime, 0.05);
-                if (m === 'octUp') v.highGain.gain.setTargetAtTime(mods.octUp ? 0.5 : 0, audioCtx.currentTime, 0.05);
                 if (m === 'ring') { v.gain.disconnect(); v.gain.connect(mods.ring ? ringGain : masterGain); }
+                // Trigger an immediate frequency recalculation for the Push
+                setFreq(v, v.lastAngle, true);
             }
         }
         
