@@ -2,20 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.10 - Pitch Lock</title>
+    <title>CRi2 / MARIAH v1.11 - EBow & Inversion</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
+        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; box-sizing: border-box; }
-        #dashboard { font-size: 16px; background: rgba(0, 20, 0, 0.8); display: inline-block; padding: 15px; border-radius: 8px; border: 1px solid #0f0; pointer-events: auto; }
+        #dashboard { font-size: 16px; background: rgba(0, 20, 0, 0.85); display: inline-block; padding: 15px; border-radius: 8px; border: 2px solid #0f0; pointer-events: auto; box-shadow: 0 0 15px rgba(0,255,0,0.2); }
+
         #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 15px; pointer-events: auto; align-items: center; }
         .row { display: flex; gap: 15px; }
-        .btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 15px 30px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 10px; }
-        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
+
+        .btn {
+            background: #000; border: 3px solid #0f0; color: #0f0;
+            padding: 15px 30px; cursor: pointer; text-transform: uppercase; 
+            font-weight: 900; font-size: 18px; border-radius: 10px; transition: 0.1s;
+        }
+        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 25px #0f0; }
         .btn.kill { border-color: #f00; color: #f00; background: #200; font-size: 22px; width: 100%; }
-        .slider-box { background: #111; padding: 10px 20px; border: 2px solid #444; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; }
+        .btn.kill:active { background: #f00; color: #fff; }
+
+        .slider-box { background: #111; padding: 10px 20px; border: 2px solid #444; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; margin-top:10px; }
         input[type=range] { cursor: pointer; flex-grow: 1; accent-color: #0f0; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 100; cursor: pointer; text-align: center; }
+
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            align-items: center; font-size: 24px; color: #0f0; z-index: 100;
+            cursor: pointer; text-align: center; line-height: 1.5;
+        }
     </style>
 
     <script id="vs" type="x-shader/x-vertex">
@@ -36,10 +51,14 @@
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
             if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
+            
             float windFactor = (u_wind == 1) ? sin(u_time * 8.0) * 0.08 : 0.0;
             float wiggle = sin(uv.y * (8.0 + u_pressure * 15.0) + u_time * 2.5) * (0.04 + windFactor);
             float line = smoothstep(0.025, 0.0, abs(uv.x - 0.5 + wiggle));
+            
             if(u_ring == 1) line *= step(0.4, fract(uv.y * 60.0 + u_time * 15.0));
+
+            // Visual FAE Inversion
             vec3 color = (u_faemode == 0) ? vec3(1.0, 0.2, 0.1) : vec3(0.0, 1.0, 1.0);
             gl_FragColor = vec4(color * line, line + 0.1);
         }
@@ -47,14 +66,14 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">INIT VORTEX ENGINE<br>(CLICK TO START)</div>
+    <div id="overlay" onclick="setupEngine()">CRi2 / MARIAH v1.11<br>INIT VORTEX ENGINE<br>(CLICK TO IGNITE)</div>
 
     <div id="ui-layer">
         <div id="dashboard">
-            HEX: 0x<span id="hexDisplay">000000</span> | STEP: <span id="stepDisplay">00/64</span><br>
-            <div class="slider-box" style="margin-top:10px;">
+            HEX: 0x<span id="hexDisplay">00</span> | STEP: <span id="stepDisplay">00/64</span><br>
+            <div class="slider-box">
                 <span>VOL</span>
-                <input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.1">
+                <input type="range" id="volSlider" min="0" max="0.5" step="0.01" value="0.12">
             </div>
         </div>
 
@@ -104,10 +123,14 @@
             active: gl.getUniformLocation(program, "u_active")
         };
 
+        // --- AUDIO ENGINE v1.11 ---
         let audioCtx = null, osc = null, masterGain = null, ringOsc = null, ringGain = null;
         let mods = { wind: false, spring: false, ring: false, fae: false };
         let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
         let liveInput = { angle: 180, pressure: 0.5, active: false };
+        
+        // EBow Glide Setting
+        const PITCH_GLIDE = 0.12; 
 
         function setupEngine() {
             document.getElementById('overlay').style.display = 'none';
@@ -116,10 +139,12 @@
                 masterGain = audioCtx.createGain();
                 masterGain.gain.value = 0;
                 masterGain.connect(audioCtx.destination);
+
                 osc = audioCtx.createOscillator(); 
                 osc.type = 'sawtooth'; 
                 osc.connect(masterGain); 
                 osc.start();
+
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
                 ringOsc.type = 'sine'; ringOsc.frequency.value = 40; 
                 ringOsc.connect(ringGain.gain); ringOsc.start();
@@ -132,7 +157,7 @@
                 audioCtx.close().then(() => {
                     audioCtx = null;
                     document.getElementById('overlay').style.display = 'flex';
-                    document.getElementById('overlay').innerText = "ENGINE KILLED. CLICK TO REARM.";
+                    document.getElementById('overlay').innerHTML = "ENGINE KILLED.<br>CLICK TO REARM.";
                 });
             }
         }
@@ -153,9 +178,21 @@
 
         function updatePitch(angle) {
             if (!osc) return;
-            // PITCH LOGIC: 40Hz base + Angle-based Zing
-            let freq = (mods.spring) ? 40 + (angle * 6) : 40 + (angle * 2.2);
-            osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.02);
+            let freq;
+            let range = mods.spring ? 1800 : 700;
+            
+            if (mods.fae) {
+                // THE INVERSION: Higher angle = Lower Frequency
+                freq = range - (mods.spring ? (angle * 4.5) : (angle * 1.6));
+                osc.type = 'triangle'; // Darker Inverse Texture
+            } else {
+                // NORMAL: Higher angle = Higher Frequency
+                freq = 40 + (mods.spring ? (angle * 4.5) : (angle * 1.6));
+                osc.type = 'sawtooth'; // Brighter Light Texture
+            }
+            
+            // THE EBOW GLIDE (Swoop)
+            osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, PITCH_GLIDE);
         }
 
         function handleInput(e) {
@@ -165,8 +202,7 @@
             const y = e.touches ? e.touches[0].clientY : e.clientY;
             liveInput.pressure = y / window.innerHeight;
             liveInput.angle = (x / window.innerWidth) * 360;
-            
-            if (!seq.play) updatePitch(liveInput.angle); // Update immediately on move
+            if (!seq.play) updatePitch(liveInput.angle);
         }
 
         canvas.addEventListener('mousemove', handleInput);
@@ -180,7 +216,6 @@
             if (osc && masterGain) {
                 let current = (seq.play && seq.data[seq.step]) ? seq.data[seq.step] : liveInput;
                 if (seq.rec && liveInput.active) seq.data[seq.step] = { a: liveInput.angle, p: liveInput.pressure };
-                
                 if (seq.play) updatePitch(current.a);
 
                 let targetVol = (seq.play || liveInput.active) ? document.getElementById('volSlider').value : 0;
