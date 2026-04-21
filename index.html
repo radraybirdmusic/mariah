@@ -2,52 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.14 - Industrial Deck</title>
+    <title>CRi2 / MARIAH v1.15 - Safe Zone</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        #ui-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; padding: 10px; display: flex; flex-direction: column; 
+            justify-content: flex-start; /* Aligns content from the top with padding */
+        }
         
-        /* THE 64 BUCKETS - 4 rows of 16 */
+        /* THE 64 BUCKETS - Moved down into the 'Safe Zone' */
         #bucket-grid { 
-            display: grid; grid-template-columns: repeat(16, 1fr); gap: 10px; 
-            width: 95%; margin: 0 auto; pointer-events: auto;
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 12px; 
+            width: 90%; max-width: 800px; margin: 60px auto 20px auto; /* 60px Top Margin for clearance */
+            pointer-events: auto;
         }
         .bucket { 
             aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; 
             background: #050505; transition: all 0.1s;
         }
-        .bucket.filled { border-color: #444; background: #1a1a1a; }
-        /* THE BOOM - High Intensity Glow */
+        .bucket.filled { border-color: #444; background: #222; }
         .bucket.active { 
-            transform: scale(1.5); 
-            box-shadow: 0 0 30px currentColor, inset 0 0 10px currentColor; 
+            transform: scale(1.6); 
+            box-shadow: 0 0 35px currentColor, inset 0 0 15px currentColor; 
             z-index: 10;
         }
 
-        /* BIG BUTTON CONSOLE */
-        #controls { pointer-events: auto; display: flex; flex-direction: column; gap: 15px; align-items: center; padding-bottom: 30px; }
-        .row { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; width: 100%; }
+        #controls { 
+            position: absolute; bottom: 20px; left: 0; width: 100%;
+            pointer-events: auto; display: flex; flex-direction: column; 
+            gap: 12px; align-items: center; padding-bottom: 10px; 
+        }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
 
         .btn {
             background: #000; border: 4px solid #0f0; color: #0f0;
-            padding: 25px 40px; cursor: pointer; text-transform: uppercase; 
-            font-weight: 900; font-size: 24px; border-radius: 15px; /* DOUBLE SIZE */
-            min-width: 180px;
+            padding: 20px 30px; cursor: pointer; text-transform: uppercase; 
+            font-weight: 900; font-size: 20px; border-radius: 12px; 
+            min-width: 150px;
         }
-        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 40px #0f0; }
+        .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
         .btn.rec { border-color: #f00; color: #f00; }
-        .btn.rec.active { background: #f00; color: #000; box-shadow: 0 0 40px #f00; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 30px; }
+        .btn.rec.active { background: #f00; color: #000; box-shadow: 0 0 30px #f00; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 85%; font-size: 26px; }
 
-        .slider-box { background: #111; padding: 15px; border: 2px solid #0f0; border-radius: 12px; display: flex; align-items: center; gap: 20px; width: 400px; pointer-events: auto; }
-        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 20px; }
+        .slider-box { background: #111; padding: 12px; border: 2px solid #0f0; border-radius: 10px; display: flex; align-items: center; gap: 15px; width: 350px; }
+        input[type=range] { flex-grow: 1; accent-color: #0f0; height: 15px; }
 
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.98); display: flex; justify-content: center;
-            align-items: center; font-size: 32px; color: #0f0; z-index: 100; cursor: pointer;
+            align-items: center; font-size: 28px; color: #0f0; z-index: 100; cursor: pointer; text-align: center;
         }
     </style>
 
@@ -68,7 +75,7 @@
 
         void main() {
             vec2 uv = gl_FragCoord.xy / u_resolution;
-            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.05, 0.0, 1.0); return; }
+            if(u_active == 0) { gl_FragColor = vec4(0.0, 0.04, 0.0, 1.0); return; }
             float wind = (u_wind == 1) ? sin(u_time * 12.0) * 0.1 : 0.0;
             float wiggle = sin(uv.y * (10.0 + u_pressure * 20.0) + u_time * 3.0) * (0.05 + wind);
             float line = smoothstep(0.03, 0.0, abs(uv.x - 0.5 + wiggle));
@@ -80,13 +87,13 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">v1.14 INDUSTRIAL<br>TAP TO IGNITE DECK</div>
+    <div id="overlay" onclick="setupEngine()">v1.15 STABLE BRAIN<br>TOUCH TO IGNITE</div>
 
     <div id="ui-layer">
         <div id="bucket-grid"></div>
 
         <div id="controls">
-            <div class="slider-box"><span>VOLUME</span><input type="range" id="volSlider" min="0" max="0.8" step="0.01" value="0.2"></div>
+            <div class="slider-box"><span>VOL</span><input type="range" id="volSlider" min="0" max="0.7" step="0.01" value="0.2"></div>
             
             <div class="row">
                 <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
@@ -116,7 +123,6 @@
         const gl = canvas.getContext('webgl');
         const bucketGrid = document.getElementById('bucket-grid');
         
-        // 1. Create exactly 64 buckets
         for(let i=0; i<64; i++) {
             let b = document.createElement('div');
             b.className = 'bucket'; b.id = 'bucket-' + i;
@@ -183,9 +189,9 @@
                 let t = touches[i], id = t.identifier || 0, x = t.clientX, y = t.clientY;
                 let angle = (x / window.innerWidth) * 360, pressure = y / window.innerHeight;
                 if(!voices[id]) voices[id] = createVoice(id);
-                let range = mods.spring ? 2000 : 800;
+                let range = mods.spring ? 1800 : 700;
                 let freq = mods.fae ? (range - (angle * 2.0)) : (40 + (angle * 2.0));
-                let glide = mods.ebow ? 0.4 : 0.05;
+                let glide = mods.ebow ? 0.35 : 0.05;
                 voices[id].osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, glide);
                 voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / activeTouches, audioCtx.currentTime, 0.05);
                 if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure, fae: mods.fae };
@@ -210,9 +216,9 @@
                 if(seq.play && activeTouches === 0) {
                     let d = seq.data[seq.step];
                     if(!voices['seq']) voices['seq'] = createVoice('seq');
-                    let range = mods.spring ? 2000 : 800;
+                    let range = mods.spring ? 1800 : 700;
                     let freq = d.fae ? (range - (d.a * 2.0)) : (40 + (d.a * 2.0));
-                    voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.4 : 0.1);
+                    voices['seq'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, mods.ebow ? 0.35 : 0.08);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
                     activeBucket.classList.add('active');
                     activeBucket.style.color = d.fae ? '#0ff' : '#f31';
@@ -221,7 +227,7 @@
                 voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
             }
             seq.step = (seq.step + 1) % 64;
-        }, 85);
+        }, 90);
 
         function render(time) {
             gl.viewport(0, 0, canvas.width = window.innerWidth, canvas.height = window.innerHeight);
