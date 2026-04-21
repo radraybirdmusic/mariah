@@ -242,19 +242,48 @@
     canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchend', stopInput);
 
-    setInterval(() => {
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
-        let ab = document.getElementById('bucket-' + seq.step);
-        if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; ab.classList.add('filled'); ab.style.backgroundColor = d.c;
-            if(seq.play && !liveActive) {
-                if(!voices['seq']) voices['seq'] = createVoice(); setFreq(voices['seq'], d.a);
-                voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-                ab.classList.add('active');
-            }
+// --- REPLACE YOUR EXISTING setInterval BLOCK WITH THIS REVISED VERSION ---
+
+setInterval(() => {
+    // 1. Reset all buckets to default state
+    document.querySelectorAll('.bucket').forEach(b => { 
+        b.classList.remove('active'); 
+        if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; 
+    });
+
+    let activeBucket = document.getElementById('bucket-' + seq.step);
+    let stepData = seq.data[seq.step];
+
+    if(stepData) {
+        // Mark bucket as having data
+        activeBucket.classList.add('filled'); 
+        activeBucket.style.backgroundColor = stepData.c;
+
+        if(seq.play) {
+            // Ensure sequencer voice exists
+            if(!voices['seq']) voices['seq'] = createVoice();
+            
+            // Critical: Update the Global Frequency and Color for the Shader
+            setFreq(voices['seq'], stepData.a);
+            
+            // Trigger Voice Gain
+            voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
+            
+            // Visual feedback for the current playing step
+            activeBucket.classList.add('active');
+            activeBucket.style.color = stepData.c;
         }
-        seq.step = (seq.step + 1) % 64;
-    }, 80);
+    } else {
+        // If the step is empty and we are playing, kill the sequencer voice gain
+        if(seq.play && voices['seq']) {
+            voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        }
+    }
+
+    // Increment step
+    seq.step = (seq.step + 1) % 64;
+}, 80);
+    
 
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
@@ -270,3 +299,4 @@
 </script>
 </body>
 </html>
+
