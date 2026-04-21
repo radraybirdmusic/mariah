@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.59 - Kinetic Engine (Compact)</title>
+    <title>CRi2 / MARIAH v1.60 - Kinetic Engine (Full FX Routing)</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
@@ -52,7 +52,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.59 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.60 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -183,7 +183,12 @@
         let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
         v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0;
         v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-        v.gain.gain.value = 0; v.osc.connect(v.gain); v.gain.connect(mods.gran ? delayNode : filterNode);
+        v.gain.gain.value = 0; 
+        
+        // Critical FIX: Check mods to route correctly on creation
+        v.osc.connect(v.gain); 
+        v.gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
+        
         v.osc.start(); return v;
     }
 
@@ -203,21 +208,30 @@
         setupEngine(); mods[m] = !mods[m]; 
         let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1));
         if(el) el.classList.toggle('active', mods[m]);
+        
+        // Update Filter and Ghost effects immediately
         if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
         if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?0.2:0, audioCtx.currentTime, 0.1);
+        
+        // Re-route ALL voices (live and sequencer) to ensure FX apply to playback
+        for(let id in voices) {
+            if(voices[id]) {
+                voices[id].gain.disconnect();
+                if(mods.sat) voices[id].gain.connect(satNode);
+                else if(mods.gran) voices[id].gain.connect(delayNode);
+                else voices[id].gain.connect(filterNode);
+            }
+        }
     }
 
     function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
     function adjustSpring(amt) { springVal = Math.max(0, Math.min(200, springVal + amt)); }
-    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
+    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[id]) setFreq(voices[i], voices[i].lastAngle, true); }
     
     function toggleFae() { 
-        setupEngine(); 
-        mods.fae = !mods.fae; 
+        setupEngine(); mods.fae = !mods.fae; 
         document.getElementById('btnFae').classList.toggle('active', mods.fae); 
-        for(let id in voices) {
-            if(voices[id]) setFreq(voices[id], voices[id].lastAngle, true);
-        }
+        for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle, true);
         updateBucketColors();
     }
 
@@ -225,8 +239,7 @@
         for(let i=0; i<64; i++) {
             if(seq.data[i]) {
                 let angle = seq.data[i].a;
-                let hue = (angle/360)*285; 
-                if(mods.fae) hue = 285-hue;
+                let hue = (angle/360)*285; if(mods.fae) hue = 285-hue;
                 let rgb = hslToRgb(hue/360, 1, 0.5);
                 seq.data[i].c = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
                 let b = document.getElementById('bucket-' + i);
@@ -259,27 +272,18 @@
 
     setInterval(() => {
         if (!audioCtx) return;
-        document.querySelectorAll('.bucket').forEach(b => { 
-            b.classList.remove('active'); 
-            b.classList.remove('playhead'); 
-            if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; 
-        });
-
-        let ab = document.getElementById('bucket-' + seq.step);
-        if(ab) ab.classList.add('playhead');
+        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.classList.remove('playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
+        let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
 
         if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; 
-            if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
+            let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
                 setFreq(voices['seq'], d.a);
                 voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.02);
                 if(ab) ab.classList.add('active');
             }
-        } else {
-            if(voices['seq']) voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-        }
+        } else { if(voices['seq']) voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
         seq.step = (seq.step + 1) % 64;
     }, 125); 
 
