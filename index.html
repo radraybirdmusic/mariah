@@ -2,37 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.18 - Chakra Spectrum</title>
+    <title>CRi2 / MARIAH v1.20 - Stick & Gate</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; cursor: crosshair; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 10px; }
         
-        /* 64 BUCKETS - 4 ROWS OF 16 */
         #bucket-grid { 
             display: grid; grid-template-columns: repeat(16, 1fr); gap: 12px; 
             width: 90%; max-width: 900px; margin: 80px auto 20px auto; pointer-events: auto;
         }
         .bucket { aspect-ratio: 1/1; border: 2px solid #222; border-radius: 50%; background: #050505; transition: transform 0.05s; }
         .bucket.filled { border: 1px solid #444; }
-        
-        /* THE CHAKRA BOOM */
-        .bucket.active { 
-            transform: scale(1.8); 
-            z-index: 10;
-            /* JavaScript injects the Roy G. Biv color here */
-        }
+        .bucket.active { transform: scale(1.8); z-index: 10; }
 
-        #controls { position: absolute; bottom: 20px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
+        /* MOVED LOWER - ADDED EXTRA PADDING AT BOTTOM */
+        #controls { position: absolute; bottom: 80px; left: 0; width: 100%; pointer-events: auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
 
-        /* INDUSTRIAL SIZED BUTTONS */
         .btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 25px 35px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 22px; border-radius: 15px; min-width: 170px; }
         .btn.active { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
         .btn.rec { border-color: #f00; color: #f00; }
         .btn.rec.active { background: #f00; color: #000; box-shadow: 0 0 30px #f00; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 28px; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 28px; margin-top: 10px; }
 
         .slider-box { background: #111; padding: 15px; border: 2px solid #0f0; border-radius: 12px; display: flex; align-items: center; gap: 20px; width: 400px; }
         input[type=range] { flex-grow: 1; accent-color: #0f0; height: 18px; }
@@ -69,7 +62,7 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="setupEngine()">v1.18 CHAKRA ENGINE<br>TOUCH TO IGNITE</div>
+    <div id="overlay" onclick="setupEngine()">v1.20 STICK & GATE<br>TAP TO IGNITE</div>
 
     <div id="ui-layer">
         <div id="bucket-grid"></div>
@@ -79,6 +72,7 @@
                 <button id="btnRec" class="btn rec" onclick="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
                 <button id="btnFae" class="btn" onclick="toggleMod('fae')">FAE</button>
+                <button id="btnStick" class="btn" onclick="toggleMod('stick')">STICK</button>
             </div>
             <div class="row">
                 <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
@@ -120,15 +114,15 @@
         const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_faemode"), pres: gl.getUniformLocation(program, "u_pressure"), wind: gl.getUniformLocation(program, "u_wind"), ring: gl.getUniformLocation(program, "u_ring"), active: gl.getUniformLocation(program, "u_active") };
 
         let audioCtx = null, masterGain = null, ringOsc = null, ringGain = null;
-        let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false };
+        let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false, stick: false };
         let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
-        let activeTouches = 0;
+        let liveActive = false;
 
         function setupEngine() {
             document.getElementById('overlay').style.display = 'none';
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                masterGain = audioCtx.createGain(); masterGain.gain.value = 0.25; masterGain.connect(audioCtx.destination);
+                masterGain = audioCtx.createGain(); masterGain.gain.value = 0; masterGain.connect(audioCtx.destination);
                 ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
                 ringOsc.type = 'sine'; ringOsc.frequency.value = 60; 
                 ringOsc.connect(ringGain.gain); ringOsc.start();
@@ -150,7 +144,6 @@
             setupEngine(); mods[m] = !mods[m]; 
             const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
             if(b) b.classList.toggle('active'); 
-            if (m === 'ring') { for(let id in voices) { voices[id].osc.disconnect(); voices[id].osc.connect(mods.ring ? ringGain : masterGain); if(mods.ring) ringGain.connect(masterGain); } }
         }
 
         function toggleSeq(mode) { 
@@ -161,9 +154,8 @@
             document.getElementById('btnPlay').classList.toggle('active', seq.play);
         }
 
-        // ROY G. BIV Mapping: 0 to 360 Angle -> Red to Violet
         function angleToChakra(angle) {
-            let hue = (angle / 360) * 280; // Scale to 280 to stop at Purple/Violet
+            let hue = (angle / 360) * 285;
             return `hsl(${hue}, 100%, 50%)`;
         }
 
@@ -171,54 +163,51 @@
             let range = mods.spring ? 2000 : 800;
             let freq = mods.fae ? (range - (angle * (mods.spring ? 4.5 : 1.8))) : (40 + (angle * (mods.spring ? 4.5 : 1.8)));
             voice.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-            let glide = mods.ebow ? 0.35 : 0.05;
-            voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, glide);
+            voice.osc.frequency.setTargetAtTime(Math.max(20, freq), audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
         }
 
         function handleTouch(e) {
             e.preventDefault(); setupEngine();
-            let touches = e.touches || [e]; activeTouches = touches.length;
+            let touches = e.touches || [e]; liveActive = true;
             for(let i=0; i<touches.length; i++) {
                 let t = touches[i], id = t.identifier || 0, x = t.clientX, y = t.clientY;
                 let angle = (x / window.innerWidth) * 360;
                 let pressure = y / window.innerHeight;
                 if(!voices[id]) voices[id] = createVoice();
                 updateVoiceParams(voices[id], angle);
-                voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / activeTouches, audioCtx.currentTime, 0.05);
+                voices[id].gain.gain.setTargetAtTime(document.getElementById('volSlider').value / touches.length, audioCtx.currentTime, 0.05);
                 if(seq.rec) seq.data[seq.step] = { a: angle, p: pressure };
             }
         }
 
-        function endTouch() { for(let id in voices) { if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } activeTouches = 0; }
+        function endTouch() { 
+            if(!mods.stick) {
+                for(let id in voices) { if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
+                liveActive = false;
+            }
+        }
 
         canvas.addEventListener('touchstart', handleTouch); canvas.addEventListener('touchmove', handleTouch);
         canvas.addEventListener('touchend', endTouch); canvas.addEventListener('mousedown', handleTouch);
         canvas.addEventListener('mouseup', endTouch);
 
         setInterval(() => {
-            document.querySelectorAll('.bucket').forEach(b => { 
-                b.classList.remove('active'); 
-                b.style.boxShadow = 'none'; 
-                b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505';
-            });
+            document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.style.backgroundColor = b.classList.contains('filled') ? '#222' : '#050505'; b.style.boxShadow = 'none'; });
             let activeBucket = document.getElementById('bucket-' + seq.step);
             
             if(seq.data[seq.step]) {
                 activeBucket.classList.add('filled');
-                let d = seq.data[seq.step];
-                let chakraColor = angleToChakra(d.a);
-                
-                if(seq.play && activeTouches === 0) {
+                if(seq.play && !liveActive) {
+                    let d = seq.data[seq.step];
                     if(!voices['seq']) voices['seq'] = createVoice();
                     updateVoiceParams(voices['seq'], d.a);
                     voices['seq'].gain.gain.setTargetAtTime(document.getElementById('volSlider').value, audioCtx.currentTime, 0.05);
+                    let color = angleToChakra(d.a);
                     activeBucket.classList.add('active');
-                    activeBucket.style.backgroundColor = chakraColor;
-                    activeBucket.style.boxShadow = `0 0 45px ${chakraColor}`;
+                    activeBucket.style.backgroundColor = color;
+                    activeBucket.style.boxShadow = `0 0 45px ${color}`;
                 }
-            } else if (voices['seq']) {
-                voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-            }
+            } else if (voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
             seq.step = (seq.step + 1) % 64;
         }, 80);
 
@@ -227,7 +216,7 @@
             gl.uniform1f(uLocs.time, time * 0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
             gl.uniform1i(uLocs.fae, mods.fae ? 1 : 0); gl.uniform1f(uLocs.pres, 0.5);
             gl.uniform1i(uLocs.wind, mods.wind ? 1 : 0); gl.uniform1i(uLocs.ring, mods.ring ? 1 : 0);
-            gl.uniform1i(uLocs.active, (activeTouches > 0 || seq.play) ? 1 : 0);
+            gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
             gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
         }
         requestAnimationFrame(render);
