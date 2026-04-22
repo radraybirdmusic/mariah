@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.72 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.73 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -18,8 +18,11 @@
             width: 100%; 
             display: flex; 
             flex-direction: column; 
-            justify-content: space-between; /* Grid Top, Controls Bottom */
-            padding-top: env(safe-area-inset-top, 20px); 
+            /* REMOVED space-between to stop pushing the bottom off-screen */
+            justify-content: flex-start; 
+            /* TIGHT GAP: Pulls the bottom up by roughly "two grids" */
+            gap: 40px; 
+            padding-top: env(safe-area-inset-top, 15px); 
             pointer-events: none; 
         }
         
@@ -65,7 +68,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.72 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.73 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -89,7 +92,7 @@
             </div>
             <div class="row">
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
-                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3" oninput="if(masterGain) masterGain.gain.value = this.value"></div>
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
             </div>
         </div>
