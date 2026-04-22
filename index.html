@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.76 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.77 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -43,8 +43,8 @@
         
         #controls { 
             position: absolute;
-            /* v1.76: Lifted to 12% to move up one more "grid height" */
-            bottom: 12%; 
+            /* v1.77: Lifted to 19% to ensure the Kill Switch is fully on-screen */
+            bottom: 19%; 
             left: 0;
             width: 100%; 
             padding-bottom: env(safe-area-inset-bottom, 5px); 
@@ -68,7 +68,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.76 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.77 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
