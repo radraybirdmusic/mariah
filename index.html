@@ -3,54 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.79 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.80</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
-        
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        
-        #main-ui { 
-            position: relative; 
-            z-index: 100; 
-            height: 100vh; 
-            width: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            padding-top: env(safe-area-inset-top, 10px); 
-            pointer-events: auto; 
-        }
-        
-        #bucket-grid { 
-            display: grid; 
-            grid-template-columns: repeat(16, 1fr); 
-            gap: 2px; 
-            width: 95%; 
-            max-width: 800px; 
-            margin: 0 auto; 
-            pointer-events: auto; 
-        }
-        
-        .bucket { aspect-ratio: 1/1; border: 1.2px solid #444; border-radius: 50%; background: rgba(10, 10, 10, 0.85); pointer-events: none; }
+        #main-ui { position: relative; z-index: 100; height: 100vh; width: 100%; display: flex; flex-direction: column; padding-top: 15px; pointer-events: none; }
+        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 95%; max-width: 800px; margin: 0 auto; pointer-events: auto; }
+        .bucket { aspect-ratio: 1/1; border: 1.2px solid #444; border-radius: 50%; background: rgba(10, 10, 10, 0.85); }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
-        
-        #controls { 
-            position: absolute;
-            bottom: 19%; 
-            left: 0;
-            width: 100%; 
-            padding-bottom: env(safe-area-inset-bottom, 5px); 
-            display: flex; 
-            flex-direction: column-reverse; 
-            gap: 4px; 
-            align-items: center; 
-            background: rgba(0,0,0,0.85); 
-            border-top: 1px solid #333;
-            pointer-events: auto; 
-        }
-        
+        #controls { position: absolute; bottom: 19%; left: 0; width: 100%; padding-bottom: 5px; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; background: rgba(0,0,0,0.85); border-top: 1px solid #333; pointer-events: auto; }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
         .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
@@ -59,12 +23,11 @@
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 14px; padding: 10px; }
         .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
-        
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 200000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.79 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.80 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -108,51 +71,55 @@
 
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
     const fs = `precision mediump float; 
-    uniform float u_time; 
-    uniform vec2 u_resolution; 
-    uniform int u_active; 
-    uniform vec3 u_color;
-    uniform int u_sat;
-    uniform int u_bit;
-    uniform float u_wah;
+    uniform float u_time; uniform vec2 u_resolution; uniform int u_active; uniform vec3 u_color;
+    uniform int u_sat; uniform int u_bit; uniform float u_wah; 
+    uniform int u_whir; uniform int u_rots; uniform int u_frac;
 
     void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution; 
+        vec2 uv = (gl_FragCoord.xy / u_resolution) - 0.5;
         if(u_active == 0) { gl_FragColor = vec4(0.0, 0.02, 0.0, 1.0); return; }
         
-        // The Wiggle Core
+        // ROTS (Rotation) logic
+        if(u_rots == 1) {
+            float s = sin(u_time), c = cos(u_time);
+            uv *= mat2(c, -s, s, c);
+        }
+
+        // FRAC (Fracture) logic
+        if(u_frac == 1) uv = fract(uv * 2.0) - 0.5;
+
+        // WHIR (Vortex) logic
+        if(u_whir == 1) {
+            float dist = length(uv);
+            float angle = atan(uv.y, uv.x) + dist * 5.0;
+            uv = vec2(cos(angle), sin(angle)) * dist;
+        }
+
         float freq = 10.0 + (u_wah * 40.0);
-        float amp = 0.04 + (u_wah * 0.06);
-        float xOffset = sin(uv.y * freq + u_time * 5.0) * amp;
+        float amp = 0.05 + (u_wah * 0.1);
+        float xShift = sin(uv.y * freq + u_time * 8.0) * amp;
         
-        // Saturation Jitter
-        if(u_sat == 1) xOffset += sin(uv.y * 500.0) * 0.005;
+        if(u_sat == 1) xShift += sin(uv.y * 600.0) * 0.01;
         
-        float dist = abs(uv.x - 0.5 + xOffset);
+        float d = abs(uv.x + xShift);
+        if(u_bit == 1) d = floor(d * 10.0) / 10.0;
         
-        // Bitcrush stepping
-        if(u_bit == 1) dist = floor(dist * 15.0) / 15.0;
-        
-        float line = smoothstep(0.06, 0.0, dist);
-        gl_FragColor = vec4(u_color * line, line + 0.1);
+        float line = smoothstep(0.08, 0.0, d);
+        gl_FragColor = vec4(u_color * line, 1.0);
     }`;
 
     function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
     const program = gl.createProgram(); gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs)); gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs)); gl.linkProgram(program); gl.useProgram(program);
     const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
     const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-    const uLocs = { 
-        time: gl.getUniformLocation(program, "u_time"), 
-        res: gl.getUniformLocation(program, "u_resolution"), 
-        color: gl.getUniformLocation(program, "u_color"), 
-        active: gl.getUniformLocation(program, "u_active"),
-        sat: gl.getUniformLocation(program, "u_sat"),
-        bit: gl.getUniformLocation(program, "u_bit"),
-        wah: gl.getUniformLocation(program, "u_wah")
-    };
+    
+    const uLocs = {};
+    ["time", "res", "color", "active", "sat", "bit", "wah", "whir", "rots", "frac"].forEach(u => {
+        uLocs[u] = gl.getUniformLocation(program, "u_" + u);
+    });
 
     let audioCtx, masterGain;
-    let voices = {}, mods = { sat: false, bit: false, wah: false, fae: false };
+    let voices = {}, mods = { sat: false, bit: false, wah: false, whir: false, rots: false, frac: false, fae: false };
     let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
     let liveActive = false, currentRgb = [0, 1, 0.5], globalOctaveMultiplier = 1.0;
 
@@ -163,19 +130,7 @@
         document.getElementById('overlay').style.display = 'none';
     }
 
-    function createVoice() {
-        let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain() };
-        v.osc.type = mods.fae ? 'triangle' : 'sawtooth';
-        v.gain.gain.value = 0; v.osc.connect(v.gain); v.gain.connect(masterGain);
-        v.osc.start(); return v;
-    }
-
-    function toggleMod(m) { 
-        setupEngine(); 
-        mods[m] = !mods[m]; 
-        document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1))?.classList.toggle('active', mods[m]); 
-    }
-    
+    function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1))?.classList.toggle('active', mods[m]); }
     function toggleSeq(m) { setupEngine(); if(m==='rec') seq.rec=!seq.rec; if(m==='play') seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
     function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active'); document.getElementById('btnFae').classList.toggle('active', mods.fae); }
     function shiftOct(m) { globalOctaveMultiplier *= m; }
@@ -189,26 +144,21 @@
             let t = touches[i], id = t.identifier || 0;
             let angle = (t.clientX / window.innerWidth) * 360;
             let freq = (60 + (angle / 360) * 1000) * globalOctaveMultiplier;
-            
-            if(!voices[id]) voices[id] = createVoice();
+            if(!voices[id]) {
+                voices[id] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain() };
+                voices[id].osc.connect(voices[id].gain); voices[id].gain.connect(masterGain); voices[id].osc.start();
+            }
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
-            
-            // COLOR CHANGE PER FREQUENCY
             let hue = (angle / 360);
             currentRgb = [Math.abs(Math.sin(hue * 3.14)), hue, 1.0 - hue];
-            
             if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)`, rgb: [...currentRgb] };
         }
     }
 
-    const ui = document.getElementById('main-ui');
-    ui.addEventListener('touchstart', handleInput, {passive: false});
-    ui.addEventListener('touchmove', handleInput, {passive: false});
-    ui.addEventListener('touchend', () => { 
-        for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); 
-        liveActive = false; 
-    });
+    window.addEventListener('touchstart', handleInput, {passive: false});
+    window.addEventListener('touchmove', handleInput, {passive: false});
+    window.addEventListener('touchend', () => { for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; });
 
     setInterval(() => {
         if (!audioCtx) return;
@@ -221,31 +171,26 @@
         let b = buckets[seq.step];
         b.classList.add('playhead');
         if (seq.data[seq.step] && seq.play) {
-            if(!voices['seq']) voices['seq'] = createVoice();
-            let d = seq.data[seq.step];
-            voices['seq'].osc.frequency.setTargetAtTime(d.freq, audioCtx.currentTime, 0.02);
+            if(!voices['seq']) {
+                voices['seq'] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain() };
+                voices['seq'].osc.connect(voices['seq'].gain); voices['seq'].gain.connect(masterGain); voices['seq'].osc.start();
+            }
+            voices['seq'].osc.frequency.setTargetAtTime(seq.data[seq.step].freq, audioCtx.currentTime, 0.02);
             voices['seq'].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.02);
-            currentRgb = d.rgb;
+            currentRgb = seq.data[seq.step].rgb;
             b.classList.add('active');
-        } else if (voices['seq']) {
-            voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-        }
+        } else if (voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
     }, 125);
 
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
-        gl.uniform1f(uLocs.time, t*0.001); 
-        gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+        gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
         gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
         gl.uniform1i(uLocs.active, (liveActive || seq.play) ? 1 : 0);
-        
-        // SHAPE CHANGE EFFECTS
-        gl.uniform1i(uLocs.sat, mods.sat ? 1 : 0);
-        gl.uniform1i(uLocs.bit, mods.bit ? 1 : 0);
-        gl.uniform1f(uLocs.wah, mods.wah ? 1.0 : 0.0);
-        
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-        requestAnimationFrame(render);
+        gl.uniform1i(uLocs.sat, mods.sat ? 1 : 0); gl.uniform1i(uLocs.bit, mods.bit ? 1 : 0);
+        gl.uniform1f(uLocs.wah, mods.wah ? 1.0 : 0.0); gl.uniform1i(uLocs.whir, mods.whir ? 1 : 0);
+        gl.uniform1i(uLocs.rots, mods.rots ? 1 : 0); gl.uniform1i(uLocs.frac, mods.frac ? 1 : 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
 </script>
