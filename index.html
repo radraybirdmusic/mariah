@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.66 - Repaired</title>
+    <title>CRi2 / MARIAH v1.67 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         
-        /* The canvas MUST have pointer-events: none so it doesn't "eat" your touches */
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
         #main-ui { 
@@ -20,7 +19,7 @@
             display: flex; 
             flex-direction: column; 
             justify-content: space-between;
-            padding-top: 60px; /* Moves grid down */
+            padding-top: 100px; /* v1.67 GRID OFFSET: Ensures top rows are visible */
             pointer-events: none; 
         }
         
@@ -31,18 +30,19 @@
             width: 95%; 
             max-width: 800px; 
             margin: 0 auto; 
-            pointer-events: auto; /* Grid responds to touch */
+            pointer-events: auto; 
         }
         
         .bucket { 
             aspect-ratio: 1/1; 
-            border: 1.5px solid #444; 
+            border: 1.2px solid #444; 
             border-radius: 50%; 
-            background: #080808; 
+            background: rgba(8, 8, 8, 0.85); 
             position: relative; 
+            transition: transform 0.05s;
         }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
-        .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
+        .bucket.active { transform: scale(1.35); z-index: 1000; box-shadow: 0 0 15px currentColor; }
         
         #controls { 
             width: 100%; 
@@ -52,7 +52,7 @@
             flex-direction: column-reverse; 
             gap: 4px; 
             align-items: center; 
-            background: rgba(0,0,0,0.8); 
+            background: rgba(0,0,0,0.85); 
         }
         
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
@@ -68,7 +68,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.66 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.67 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -92,7 +92,7 @@
             </div>
             <div class="row">
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
-                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3" oninput="if(masterGain) masterGain.gain.value = this.value"></div>
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
             </div>
         </div>
@@ -111,13 +111,12 @@
         buckets.push(b);
     }
 
-    // Shader Source
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
     const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform vec3 u_color; uniform int u_active;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
-        float dist = abs(uv.x - 0.5 + sin(uv.y * 10.0 + u_time) * 0.05);
-        float line = smoothstep(0.05, 0.0, dist);
+        float dist = abs(uv.x - 0.5 + sin(uv.y * 12.0 + u_time * 2.0) * 0.03);
+        float line = smoothstep(0.06, 0.0, dist);
         gl_FragColor = u_active == 1 ? vec4(u_color * line, 1.0) : vec4(0.0, 0.02, 0.0, 1.0);
     }`;
 
@@ -128,7 +127,7 @@
     const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), color: gl.getUniformLocation(program, "u_color"), active: gl.getUniformLocation(program, "u_active") };
 
     let audioCtx, masterGain;
-    let voices = {}, mods = { fae: false, sat: false, whir: false, rots: false, frac: false, ghst: false, gran: false, wah: false, bit: false };
+    let voices = {}, mods = { fae: false };
     let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
     let liveActive = false, currentRgb = [0, 1, 0.5], globalOctaveMultiplier = 1.0;
 
@@ -159,13 +158,13 @@
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0;
             let angle = (t.clientX / window.innerWidth) * 360;
-            let freq = (40 + (angle / 360) * 800) * globalOctaveMultiplier;
+            let freq = (60 + (angle / 360) * 1200) * globalOctaveMultiplier;
             if(!voices[id]) voices[id] = createVoice();
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
             
             let hue = (angle / 360);
-            currentRgb = [Math.abs(Math.sin(hue * 3.14)), hue, 1.0 - hue];
+            currentRgb = [Math.abs(Math.sin(hue * 3.14)), 0.8, 0.5];
             if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)` };
         }
     }
@@ -175,7 +174,6 @@
         liveActive = false; 
     }
 
-    // Touch listeners on the WINDOW to ensure full screen interaction
     window.addEventListener('touchstart', handleInput, {passive: false});
     window.addEventListener('touchmove', handleInput, {passive: false});
     window.addEventListener('touchend', stopInput);
