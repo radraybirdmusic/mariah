@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.90 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.91 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; height: 100vh; width: 100vw; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
@@ -18,7 +18,7 @@
             width: 100%; 
             display: flex; 
             flex-direction: column; 
-            padding-top: env(safe-area-inset-top, 10px); 
+            padding-top: 10px; 
             pointer-events: none; 
         }
         
@@ -32,13 +32,12 @@
             pointer-events: auto; 
         }
         
-        .bucket { aspect-ratio: 1/1; border: 1.5px solid #444; border-radius: 50%; background: rgba(10, 10, 10, 0.8); position: relative; }
+        .bucket { aspect-ratio: 1/1; border: 1.5px solid #444; border-radius: 50%; background: rgba(10, 10, 10, 0.8); }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         
         #controls { 
             position: absolute;
-            /* v1.90: Lifted up 1.5 grid heights (Approx 20% from bottom) */
             bottom: 20%; 
             left: 0;
             width: 100%; 
@@ -62,7 +61,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.90 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.91 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -147,7 +146,6 @@
 
     function handleInput(e) {
         setupEngine();
-        // Ignore if touching controls directly
         if (e.target.closest('#controls')) return;
         
         liveActive = true;
@@ -156,16 +154,19 @@
             let t = touches[i], id = t.identifier || 0;
             let angle = (t.clientX / window.innerWidth) * 360;
             let freq = (60 + (angle / 360) * 1000) * globalOctaveMultiplier;
+            
             if(!voices[id]) voices[id] = createVoice();
+            
+            // ENSURE SOUND TRIGGERS ALWAYS
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
+            
             let hue = (angle / 360);
             currentRgb = [Math.abs(Math.sin(hue * 3.14)), hue, 1.0 - hue];
             if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)`, rgb: [...currentRgb] };
         }
     }
 
-    // Capture touches on the entire window for maximum interaction
     window.addEventListener('touchstart', (e) => { 
         if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') {
              handleInput(e); 
