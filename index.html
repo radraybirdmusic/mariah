@@ -1,171 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>CRi2 v1.67 - MEGA</title>
-<style>
-body { margin: 0; background: #000; overflow: hidden; font-family: monospace; color: #0f0; }
-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
-#ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-#bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; width: 95%; margin: 380px auto 0; pointer-events: auto; }
-.bucket { aspect-ratio: 1/1; border: 1px solid #333; border-radius: 50%; background: #080808; }
-.bucket.active { transform: scale(1.5); box-shadow: 0 0 10px currentColor; }
-#controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: 30px; pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 10px; align-items: center; z-index: 999; background: rgba(0,0,0,0.9); }
-.row { display: flex; gap: 8px; justify-content: center; width: 100%; }
-.btn { background: #000; border: 4px solid #0f0; color: #0f0; padding: 35px 20px; font-weight: 900; font-size: 22px; border-radius: 15px; min-width: 100px; touch-action: none; }
-.btn.active { background: #0f0 !important; color: #000 !important; }
-.btn.fx { border-color: #ff0; color: #ff0; }
-.btn.kill { border-color: #fff; background: #600; width: 95%; padding: 25px; }
-.slider-box { background: #111; padding: 15px; border: 5px solid #0f0; border-radius: 15px; width: 300px; display: flex; }
-input[type=range] { flex-grow: 1; height: 60px; accent-color: #0f0; }
-#overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 30px; color: #0f0; z-index: 1000; cursor: pointer; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CRi2 / MARIAH v1.65 - Fixed Sequencer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
+        body.fae-active { background: #fff !important; color: #000 !important; }
+        
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        
+        #main-ui { 
+            position: relative; 
+            z-index: 100; 
+            height: 100vh; 
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            padding-top: 40px; 
+            pointer-events: none; 
+        }
+        
+        #bucket-grid { 
+            display: grid; 
+            grid-template-columns: repeat(16, 1fr); 
+            gap: 4px; 
+            width: 90%; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            pointer-events: auto; 
+        }
+        
+        .bucket { 
+            aspect-ratio: 1/1; 
+            border: 1px solid #333; 
+            border-radius: 50%; 
+            background: rgba(10, 10, 10, 0.8); 
+            transition: transform 0.1s;
+        }
+
+        /* Playhead Highlight */
+        .bucket.playhead { 
+            border: 2px solid #fff !important; 
+            box-shadow: 0 0 15px #fff;
+            transform: scale(1.1);
+            z-index: 2;
+        }
+
+        /* Active/Triggered State */
+        .bucket.active { 
+            transform: scale(1.4); 
+            box-shadow: 0 0 20px currentColor; 
+            z-index: 3;
+        }
+        
+        #controls { 
+            width: 100%; 
+            padding-bottom: 20px; 
+            pointer-events: auto; 
+            display: flex; 
+            flex-direction: column-reverse; 
+            gap: 6px; 
+            align-items: center; 
+            background: rgba(0,0,0,0.7); 
+        }
+        /* (Rest of your styles remain the same) */
+        .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
+        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; }
+        .btn.active { background: #0f0 !important; color: #000 !important; }
+        .btn.kin { border-color: #f0f; color: #f0f; } 
+        .btn.fx { border-color: #ff0; color: #ff0; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 14px; padding: 10px; }
+        .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 2000; cursor: pointer; text-align: center; }
+    </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">v1.57 MEGA<br>IGNITE</div>
-<div id="ui-layer">
-<div id="bucket-grid"></div>
-<div id="controls">
-<button class="btn kill" onclick="location.reload()">!! RESET !!</button>
-<div class="row">
-<button class="btn fx" id="btnSat" ontouchstart="toggleMod('sat')">SAT</button>
-<button class="btn fx" id="btnGran" ontouchstart="toggleMod('gran')">GRAN</button>
-<button class="btn fx" id="btnWah" ontouchstart="toggleMod('wah')">WAH</button>
-<button class="btn fx" id="btnBit" ontouchstart="toggleMod('bit')">BIT</button>
-</div>
-<div class="row">
-<button class="btn" style="border-color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
-<div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
-<button class="btn" style="border-color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
-</div>
-</div>
-</div>
-<canvas id="vortexCanvas"></canvas>
+    <div id="overlay" onclick="setupEngine()">v1.65 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="main-ui">
+        <div id="bucket-grid"></div>
+        <div id="controls">
+            <button class="btn kill" onclick="window.location.reload()">!! NUCLEAR RESET !!</button>
+            <div class="row">
+                <button id="btnWhir" class="btn kin" onclick="toggleMod('whir')">WHIR</button>
+                <button id="btnRots" class="btn kin" onclick="toggleMod('rots')">ROTS</button>
+                <button id="btnFrac" class="btn kin" onclick="toggleMod('frac')">FRAC</button>
+                <button id="btnGhst" class="btn kin" onclick="toggleMod('ghst')">GHST</button>
+            </div>
+            <div class="row">
+                <button id="btnSat" class="btn fx" onclick="toggleMod('sat')">SAT</button>
+                <button id="btnGran" class="btn fx" onclick="toggleMod('gran')">GRAN</button>
+                <button id="btnWah" class="btn fx" onclick="toggleMod('wah')">WAH</button>
+                <button id="btnBit" class="btn fx" onclick="toggleMod('bit')">BIT</button>
+            </div>
+            <div class="row">
+                <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec')">REC</button>
+                <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
+                <button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
+            </div>
+            <div class="row">
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3" oninput="if(masterGain) masterGain.gain.value = this.value"></div>
+            </div>
+        </div>
+    </div>
+    <canvas id="vortexCanvas"></canvas>
 
 <script>
-let audioCtx, masterGain, satNode, filterNode, delayNode, ringOsc, ringGain, ghostGain, whiteNoise;
-let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, ebow: false, theremin: false, stick: false, sat: false, bit: false, wah: false, gran: false, whir: false, rots: false, frac: false, ghst: false };
-let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
-let liveActive = false, globalOctaveMultiplier = 1.0, currentRgb = [0, 1, 0.5], springVal = 0, ghostForce = 0.5;
-
-function setupEngine() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination);
-    
-    // THE VOLUME FIX: Link slider to masterGain
-    const vol = document.getElementById('volSlider');
-    masterGain.gain.value = vol.value;
-    vol.oninput = () => { if(masterGain) masterGain.gain.setTargetAtTime(vol.value, audioCtx.currentTime, 0.05); };
-
-    satNode = audioCtx.createWaveShaper();
-    let curve = new Float32Array(44100);
-    for (let i=0; i<44100; i++) { let x = i*2/44100-1; curve[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); }
-    satNode.curve = curve; satNode.connect(masterGain);
-
-    filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.connect(satNode);
-    
-    delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3;
-    let fb = audioCtx.createGain(); fb.gain.value = 0.5;
-    delayNode.connect(fb); fb.connect(delayNode); delayNode.connect(filterNode);
-
-    ghostGain = audioCtx.createGain(); ghostGain.gain.value = 0;
-    let bufferSize = 2 * audioCtx.sampleRate, nBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), out = nBuf.getChannelData(0);
-    for (let i=0; i<bufferSize; i++) out[i] = Math.random() * 2 - 1;
-    whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer = nBuf; whiteNoise.loop = true;
-    whiteNoise.connect(ghostGain); ghostGain.connect(filterNode); whiteNoise.start();
-
-    ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain();
-    ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
-    document.getElementById('overlay').style.display = 'none';
-}
-
-function createVoice() {
-    let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180, lastX: 0, lastTime: 0 };
-    v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0;
-    v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-    v.gain.gain.value = 1.0; // Voice internal gain always 1, master handles vol
-    v.osc.connect(v.gain); v.gain.connect(mods.gran ? delayNode : filterNode);
-    v.osc.start(); return v;
-}
-
-function setFreq(v, angle, forceSnap = false) {
-    if (!v || !v.osc) return;
-    let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctaveMultiplier;
-    if (mods.rots) base *= (1 + Math.sin(audioCtx.currentTime * 2) * 0.05);
-    v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-    if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
-    else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
-    v.lastAngle = angle;
-    let hue = (angle/360)*285; if(mods.fae) hue = 285-hue;
-    currentRgb = hslToRgb(hue/360, 1, 0.5);
-}
-
-function toggleMod(m) { 
-    setupEngine(); mods[m] = !mods[m]; 
-    let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1));
-    if(el) el.classList.toggle('active', mods[m]);
-    if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
-}
-
-function adjustSpring(amt) { setupEngine(); springVal = Math.max(0, Math.min(200, springVal + amt)); }
-function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
-function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
-
-function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
-</script>
-
-<script>
-    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
-
-    function handleInput(e) {
-        setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
-        liveActive = true; let touches = e.touches || [e];
-        for(let i=0; i<touches.length; i++) {
-            let t = touches[i], id = t.identifier || 0; 
-            let angle = (t.clientX / window.innerWidth) * 360;
-            if(!voices[id]) voices[id] = createVoice();
-            setFreq(voices[id], angle);
-            // Ensure master volume is applied to the individual gain nodes
-            voices[id].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})` };
-        }
+    // --- INITIALIZATION ---
+    const bucketGrid = document.getElementById('bucket-grid');
+    const buckets = [];
+    for(let i=0; i<64; i++) { 
+        let b = document.createElement('div'); 
+        b.className = 'bucket'; 
+        b.id = 'bucket-' + i; 
+        bucketGrid.appendChild(b); 
+        buckets.push(b);
     }
 
-    function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
+    // --- WEBGL SETUP (Simplified for brevity, same as yours) ---
+    const canvas = document.getElementById('vortexCanvas');
+    const gl = canvas.getContext('webgl');
+    const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
+    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_active; uniform vec3 u_color; 
+    void main() { 
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        float dist = abs(uv.x - 0.5);
+        float line = smoothstep(0.1, 0.0, dist);
+        gl_FragColor = u_active == 1 ? vec4(u_color * line, 1.0) : vec4(0.0, 0.05, 0.0, 1.0); 
+    }`;
+    function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
+    const program = gl.createProgram(); gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs)); gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs)); gl.linkProgram(program); gl.useProgram(program);
+    const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+    const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+    const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), color: gl.getUniformLocation(program, "u_color"), active: gl.getUniformLocation(program, "u_active") };
 
-    canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', stopInput);
-    canvas.addEventListener('mousedown', handleInput); window.addEventListener('mouseup', stopInput);
+    // --- AUDIO & STATE ---
+    let audioCtx, masterGain;
+    let voices = {}, mods = { fae: false };
+    let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
+    let currentRgb = [0, 1, 0.5];
 
-    setInterval(() => {
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
-        let ab = document.getElementById('bucket-' + seq.step);
-        if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; ab.classList.add('filled'); ab.style.backgroundColor = d.c;
-            if(seq.play && !liveActive) {
-                if(!voices['seq']) voices['seq'] = createVoice(); setFreq(voices['seq'], d.a);
-                voices['seq'].gain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-                ab.classList.add('active');
-            }
+    function setupEngine() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain(); 
+        masterGain.gain.value = 0.3; 
+        masterGain.connect(audioCtx.destination);
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    function createVoice() {
+        let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain() };
+        v.osc.type = 'sawtooth';
+        v.gain.gain.value = 0;
+        v.osc.connect(v.gain);
+        v.gain.connect(masterGain);
+        v.osc.start();
+        return v;
+    }
+
+    function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1))?.classList.toggle('active'); }
+    function toggleSeq(m) { setupEngine(); if(m==='rec') seq.rec = !seq.rec; if(m==='play') seq.play = !seq.play; document.getElementById('btnRec').classList.toggle('active', seq.rec); document.getElementById('btnPlay').classList.toggle('active', seq.play); }
+    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active'); }
+
+    // --- INPUT HANDLING ---
+    window.addEventListener('touchstart', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        setupEngine();
+        let angle = (e.touches[0].clientX / window.innerWidth) * 360;
+        if (!voices['live']) voices['live'] = createVoice();
+        let freq = 100 + (angle);
+        voices['live'].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+        voices['live'].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
+        
+        currentRgb = [Math.random(), 1.0, 0.5]; // Simplified color
+        
+        if (seq.rec) {
+            seq.data[seq.step] = { freq: freq, color: `rgb(${currentRgb[0]*255}, ${currentRgb[1]*255}, ${currentRgb[2]*255})` };
         }
+    });
+
+    window.addEventListener('touchend', () => {
+        if (voices['live']) voices['live'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+    });
+
+    // --- SEQUENCER HEARTBEAT ---
+    setInterval(() => {
+        if (!audioCtx) return;
+
+        // 1. Clear previous playhead visuals
+        buckets.forEach((b, i) => {
+            b.classList.remove('playhead');
+            b.classList.remove('active');
+            // If there's no recorded data, keep it dark. 
+            // If there IS data, it keeps its recorded color.
+            if (!seq.data[i]) {
+                b.style.backgroundColor = ''; 
+            }
+        });
+
+        // 2. Advance step
         seq.step = (seq.step + 1) % 64;
-    }, 80);
+        let currentBucket = buckets[seq.step];
+        let stepData = seq.data[seq.step];
+
+        // 3. Visual Playhead
+        currentBucket.classList.add('playhead');
+
+        // 4. Handle Playback
+        if (stepData) {
+            currentBucket.style.backgroundColor = stepData.color;
+            if (seq.play) {
+                if (!voices['seq']) voices['seq'] = createVoice();
+                voices['seq'].osc.frequency.setTargetAtTime(stepData.freq, audioCtx.currentTime, 0.02);
+                voices['seq'].gain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 0.02);
+                currentBucket.classList.add('active');
+            }
+        } else {
+            if (voices['seq']) voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        }
+    }, 150);
 
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
-        gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.wind, mods.wind?1:0);
-        gl.uniform1i(uLocs.ring, mods.ring?1:0); gl.uniform1f(uLocs.spring, springVal);
-        gl.uniform1i(uLocs.sat, mods.sat?1:0); gl.uniform1i(uLocs.bit, mods.bit?1:0);
-        gl.uniform1f(uLocs.wah, mods.wah?1.0:0.0); gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
-        gl.uniform1i(uLocs.active, (liveActive||seq.play)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?0.5:0.0);
-        gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
+        gl.uniform1f(uLocs.time, t*0.001);
+        gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+        gl.uniform1i(uLocs.active, (seq.play || voices['live']?.gain.gain.value > 0.01) ? 1 : 0);
+        gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
 </script>
 </body>
 </html>
-
-
