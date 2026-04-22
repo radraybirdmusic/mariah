@@ -2,23 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v1.64 - Kinetic Engine (Bucket Recovery)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CRi2 / MARIAH v1.65 - Kinetic Engine (PINNED BUCKETS)</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         
-        /* The Visualizer - Stays in the back */
-        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: block; pointer-events: none; }
+        /* Fixed Background Visualizer */
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
-        /* The UI Layer - Forced to the front */
-        #ui-layer { 
+        /* Main UI Container - This forces the layout */
+        #main-ui { 
             position: relative; 
-            width: 100%; 
+            z-index: 100; 
             height: 100vh; 
-            z-index: 99999; /* Massive priority */
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; /* Buckets Top, Controls Bottom */
+            padding-top: env(safe-area-inset-top, 20px); 
+            pointer-events: none; 
         }
         
         #bucket-grid { 
@@ -27,38 +31,33 @@
             gap: 2px; 
             width: 95%; 
             max-width: 800px; 
-            margin: 20px auto 0 auto; /* Pushed down 20px from very top */
+            margin: 0 auto; 
             pointer-events: auto; 
-            background: rgba(0,0,0,0.2); /* Slight shadow to see the area */
         }
         
         .bucket { 
             aspect-ratio: 1/1; 
-            min-height: 10px; 
-            border: 1px solid #444; 
+            border: 1.5px solid #444; 
             border-radius: 50%; 
             background: #080808; 
             position: relative; 
         }
         .fae-active .bucket { border-color: #999; background: #eee; }
-        .bucket.active { transform: scale(1.3); z-index: 100000; box-shadow: 0 0 10px currentColor; }
+        .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
         .fae-active .bucket.playhead { border-color: #000 !important; box-shadow: 0 0 10px #000; }
         
         #controls { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
             width: 100%; 
-            padding-bottom: env(safe-area-inset-bottom, 5px); 
+            padding-bottom: env(safe-area-inset-bottom, 10px); 
             pointer-events: auto; 
             display: flex; 
             flex-direction: column-reverse; 
             gap: 4px; 
             align-items: center; 
-            background: rgba(0,0,0,0.85); 
+            background: rgba(0,0,0,0.8); 
         }
-        .fae-active #controls { background: rgba(255,255,255,0.85); }
+        .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
         
         .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
@@ -70,7 +69,6 @@
         .btn.kin.active { background: #f0f !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 14px; padding: 10px; min-width: auto; }
         .btn.step { min-width: 30px; padding: 8px 2px; }
-        
         .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
         .fae-active .slider-box { background: #eee; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
@@ -79,8 +77,8 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.64 KINETIC ENGINE<br>START CIRCUIT</div>
-    <div id="ui-layer">
+    <div id="overlay" onclick="setupEngine()">v1.65 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
             <button class="btn kill" ontouchstart="window.location.reload(true)">!! NUCLEAR RESET !!</button>
@@ -149,12 +147,8 @@
     }`;
 
     function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
-    const program = gl.createProgram();
-    gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs));
-    gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs));
-    gl.linkProgram(program); gl.useProgram(program);
-    const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+    const program = gl.createProgram(); gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs)); gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs)); gl.linkProgram(program); gl.useProgram(program);
+    const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
     const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
     const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_fae"), wind: gl.getUniformLocation(program, "u_wind"), ring: gl.getUniformLocation(program, "u_ring"), spring: gl.getUniformLocation(program, "u_spring"), sat: gl.getUniformLocation(program, "u_sat"), bit: gl.getUniformLocation(program, "u_bit"), wah: gl.getUniformLocation(program, "u_wah"), color: gl.getUniformLocation(program, "u_color"), active: gl.getUniformLocation(program, "u_active"), ghst: gl.getUniformLocation(program, "u_ghst") };
 
@@ -175,7 +169,6 @@
         whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true; whiteNoise.connect(ghostGain); ghostGain.connect(filterNode); whiteNoise.start();
         ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain(); ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById('volSlider').addEventListener('input', function() { if(masterGain) masterGain.gain.setTargetAtTime(this.value, audioCtx.currentTime, 0.02); });
     }
 
     function createVoice() {
@@ -214,7 +207,7 @@
     function updateBucketColors() { for(let i=0; i<64; i++) { if(seq.data[i]) { let angle = seq.data[i].a; let hue = (angle/360)*285; if(mods.fae) hue = 285-hue; let rgb = hslToRgb(hue/360, 1, 0.5); seq.data[i].c = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`; let b = document.getElementById('bucket-' + i); if(b) b.style.backgroundColor = seq.data[i].c; } } }
     function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
     function adjustSpring(amt) { springVal = Math.max(0, Math.min(200, springVal + amt)); }
-    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
+    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
 
     function handleInput(e) {
@@ -232,6 +225,7 @@
 
     function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
+    
     canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchend', stopInput);
