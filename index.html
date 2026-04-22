@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.89 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.90 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; height: 100vh; width: 100vw; }
@@ -38,8 +38,8 @@
         
         #controls { 
             position: absolute;
-            /* v1.89 Anchor: Pulled up significantly to clear browser chrome */
-            bottom: 12%; 
+            /* v1.90: Lifted up 1.5 grid heights (Approx 20% from bottom) */
+            bottom: 20%; 
             left: 0;
             width: 100%; 
             padding-bottom: env(safe-area-inset-bottom, 10px); 
@@ -49,6 +49,7 @@
             gap: 4px; 
             align-items: center; 
             background: rgba(0,0,0,0.85); 
+            border-top: 1px solid #333;
         }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
         .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
@@ -61,7 +62,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.89 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.90 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -85,7 +86,7 @@
             </div>
             <div class="row">
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
-                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3" oninput="if(masterGain) masterGain.gain.value = this.value"></div>
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
             </div>
         </div>
@@ -110,7 +111,6 @@
         float wiggle = sin(uv.y * 20.0 + u_time * 8.0) * 0.05;
         float dist = abs(uv.x - 0.5 + wiggle);
         float line = smoothstep(0.06, 0.0, dist);
-        // Show line always. Color changes when hot.
         vec3 finalCol = (u_active == 1) ? u_color : vec3(0.0, 0.15, 0.0);
         gl_FragColor = vec4(finalCol * line, line + 0.1);
     }`;
@@ -147,8 +147,9 @@
 
     function handleInput(e) {
         setupEngine();
-        // Ignore buttons
-        if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
+        // Ignore if touching controls directly
+        if (e.target.closest('#controls')) return;
+        
         liveActive = true;
         let touches = e.touches || [e];
         for(let i=0; i<touches.length; i++) {
@@ -164,14 +165,14 @@
         }
     }
 
-    // Capture touches on the whole window to ensure the "wiggle space" works
+    // Capture touches on the entire window for maximum interaction
     window.addEventListener('touchstart', (e) => { 
-        if (e.target.tagName !== 'BUTTON') {
+        if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') {
              handleInput(e); 
         }
     }, {passive: false});
     window.addEventListener('touchmove', (e) => { 
-        if (e.target.tagName !== 'BUTTON') {
+        if (e.target.tagName !== 'BUTTON' && e.target.type !== 'range') {
              handleInput(e); 
         }
     }, {passive: false});
