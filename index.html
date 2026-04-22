@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.91 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.92 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
@@ -61,7 +61,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.91 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.92 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -128,7 +128,8 @@
     function setupEngine() {
         if (audioCtx) return;
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        masterGain = audioCtx.createGain(); masterGain.gain.value = 0.3; masterGain.connect(audioCtx.destination);
+        masterGain = audioCtx.createGain(); masterGain.gain.value = document.getElementById('volSlider').value;
+        masterGain.connect(audioCtx.destination);
         document.getElementById('overlay').style.display = 'none';
     }
 
@@ -157,13 +158,16 @@
             
             if(!voices[id]) voices[id] = createVoice();
             
-            // ENSURE SOUND TRIGGERS ALWAYS
+            // DIRECT AUDIO INJECTION - No conditional REC check
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
             
             let hue = (angle / 360);
             currentRgb = [Math.abs(Math.sin(hue * 3.14)), hue, 1.0 - hue];
-            if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)`, rgb: [...currentRgb] };
+            
+            if(seq.rec) {
+                seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)`, rgb: [...currentRgb] };
+            }
         }
     }
 
@@ -177,8 +181,14 @@
              handleInput(e); 
         }
     }, {passive: false});
-    window.addEventListener('touchend', () => { 
-        for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); 
+    window.addEventListener('touchend', (e) => { 
+        let touches = e.changedTouches || [e];
+        for(let i=0; i<touches.length; i++) {
+            let id = touches[i].identifier || 0;
+            if(voices[id] && id !== 'seq') {
+                voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            }
+        }
         liveActive = false; 
     });
 
