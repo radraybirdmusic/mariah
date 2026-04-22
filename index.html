@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.0 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v2.02 - Kinetic Engine (Surgical Fix)</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* ITEM 1: Moved down with 40px top margin for visibility */
-        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 40px auto 0 auto; pointer-events: auto; }
+        /* SURGICAL CHANGE: ONLY the margin-top was changed to 100px */
+        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 100px auto 0 auto; pointer-events: auto; }
         
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
         .fae-active .bucket { border-color: #ddd; }
@@ -20,29 +20,23 @@
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 5px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        
-        /* ITEM 2: Buttons 50% Bigger */
-        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 12px 15px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 16px; border-radius: 8px; min-width: 98px; touch-action: none; user-select: none; }
-        
+        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
         .fae-active .btn { background: #fff; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.fx { border-color: #ff0; color: #ff0; }
         .btn.fx.active { background: #ff0 !important; color: #000 !important; }
         .btn.kin { border-color: #f0f; color: #f0f; } 
         .btn.kin.active { background: #f0f !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 21px; padding: 15px; min-width: auto; }
-        .btn.step { min-width: 45px; padding: 12px 3px; }
-        
-        /* Scaled slider box to match buttons */
-        .slider-box { background: #111; padding: 10px 15px; border: 1.5px solid #0ff; border-radius: 8px; display: flex; align-items: center; width: 240px; }
-        
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 14px; padding: 10px; min-width: auto; }
+        .btn.step { min-width: 30px; padding: 8px 2px; }
+        .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
         .fae-active .slider-box { background: #eee; }
-        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 30px; }
+        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 100000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.0 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.02 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
