@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.70 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.71 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -18,9 +18,8 @@
             width: 100%; 
             display: flex; 
             flex-direction: column; 
-            /* Pulling out the middle slack */
-            justify-content: flex-start; 
-            padding-top: 10px; 
+            /* Fixed spacing for clean screenshots */
+            padding: 20px 0 env(safe-area-inset-bottom, 10px) 0;
             pointer-events: none; 
         }
         
@@ -28,48 +27,71 @@
             display: grid; 
             grid-template-columns: repeat(16, 1fr); 
             gap: 2px; 
-            width: 96%; 
-            max-width: 850px; 
+            width: 94%; 
+            max-width: 800px; 
             margin: 0 auto; 
-            pointer-events: auto; 
+            pointer-events: auto;
+            flex-shrink: 0; /* Don't squash the grid */
         }
         
         .bucket { 
             aspect-ratio: 1/1; 
             border: 1px solid #444; 
             border-radius: 50%; 
-            background: rgba(10, 10, 10, 0.8); 
-            position: relative; 
+            background: rgba(10, 10, 10, 0.9); 
         }
-        .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
-        .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 15px currentColor; }
+        .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 8px #fff; }
+        .bucket.active { transform: scale(1.2); z-index: 1000; box-shadow: 0 0 12px currentColor; }
         
         #controls { 
-            /* v1.70 Anchor: Pushes everything above it up and stays at bottom */
             margin-top: auto; 
             width: 100%; 
-            padding-bottom: env(safe-area-inset-bottom, 10px); 
             pointer-events: auto; 
             display: flex; 
             flex-direction: column-reverse; 
-            gap: 4px; 
+            gap: 2px; 
             align-items: center; 
-            background: rgba(0,0,0,0.9); 
-            border-top: 1px solid #222;
+            background: rgba(0,0,0,0.95); 
+            border-top: 1.5px solid #333;
+            /* CRITICAL: Ensure it never expands beyond the screen */
+            max-height: 45vh; 
+            padding: 5px 0;
         }
         
-        .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
-        .btn.active { background: #0f0 !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 90%; font-size: 14px; padding: 8px; }
-        .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
-        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 18px; }
+        .row { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; margin-bottom: 2px; }
         
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 200000; cursor: pointer; text-align: center; }
+        .btn { 
+            background: #000; 
+            border: 1.5px solid #0f0; 
+            color: #0f0; 
+            padding: 6px 8px; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            font-weight: 700; 
+            font-size: 10px; 
+            border-radius: 4px; 
+            min-width: 60px; 
+            touch-action: none; 
+        }
+        .btn.active { background: #0f0 !important; color: #000 !important; }
+        .btn.kill { border-color: #fff; color: #fff; background: #500; width: 92%; font-size: 12px; padding: 6px; margin-bottom: 4px; }
+        
+        .slider-box { 
+            background: #111; 
+            padding: 4px 8px; 
+            border: 1.2px solid #0ff; 
+            border-radius: 4px; 
+            display: flex; 
+            align-items: center; 
+            width: 140px; 
+        }
+        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 14px; }
+        
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 22px; color: #0f0; z-index: 200000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.70 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.71 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -112,7 +134,6 @@
         buckets.push(b);
     }
 
-    // Audio/WebGL Engine remains standard v1.xx spec
     let audioCtx, masterGain;
     let voices = {}, mods = { fae: false };
     let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
@@ -155,14 +176,12 @@
         }
     }
 
-    function stopInput() { 
-        for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); 
-        liveActive = false; 
-    }
-
     window.addEventListener('touchstart', handleInput, {passive: false});
     window.addEventListener('touchmove', handleInput, {passive: false});
-    window.addEventListener('touchend', stopInput);
+    window.addEventListener('touchend', () => { 
+        for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); 
+        liveActive = false; 
+    });
 
     setInterval(() => {
         if (!audioCtx) return;
@@ -183,8 +202,6 @@
             voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
         }
     }, 125);
-
-    // Render loop (Shader logic omitted for brevity, same as previous v1.xx versions)
 </script>
 </body>
 </html>
