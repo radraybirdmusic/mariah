@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.77 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.78 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -19,7 +19,8 @@
             display: flex; 
             flex-direction: column; 
             padding-top: env(safe-area-inset-top, 10px); 
-            pointer-events: none; 
+            /* This is the key: auto allows the container to catch touches */
+            pointer-events: auto; 
         }
         
         #bucket-grid { 
@@ -32,35 +33,29 @@
             pointer-events: auto; 
         }
         
-        .bucket { 
-            aspect-ratio: 1/1; 
-            border: 1.2px solid #444; 
-            border-radius: 50%; 
-            background: rgba(10, 10, 10, 0.85); 
-        }
+        .bucket { aspect-ratio: 1/1; border: 1.2px solid #444; border-radius: 50%; background: rgba(10, 10, 10, 0.85); pointer-events: none; }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         
         #controls { 
             position: absolute;
-            /* v1.77: Lifted to 19% to ensure the Kill Switch is fully on-screen */
             bottom: 19%; 
             left: 0;
             width: 100%; 
             padding-bottom: env(safe-area-inset-bottom, 5px); 
-            pointer-events: auto; 
             display: flex; 
             flex-direction: column-reverse; 
             gap: 4px; 
             align-items: center; 
             background: rgba(0,0,0,0.85); 
             border-top: 1px solid #333;
+            pointer-events: auto; /* Buttons stay clickable */
         }
         
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
+        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 14px; padding: 10px; margin-bottom: 2px; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 14px; padding: 10px; }
         .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
         
@@ -68,8 +63,8 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.77 KINETIC ENGINE<br>START CIRCUIT</div>
-    <div id="main-ui">
+    <div id="overlay" onclick="setupEngine()">v1.78 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="main-ui" id="touch-zone">
         <div id="bucket-grid"></div>
         <div id="controls">
             <button class="btn kill" ontouchstart="window.location.reload(true)">!! NUCLEAR RESET !!</button>
@@ -152,25 +147,30 @@
 
     function handleInput(e) {
         setupEngine();
-        if (e.target.closest('#controls') || e.target.closest('#bucket-grid')) return;
+        // Ignore if touching a button specifically
+        if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
+        
         liveActive = true;
         let touches = e.touches || [e];
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0;
             let angle = (t.clientX / window.innerWidth) * 360;
             let freq = (60 + (angle / 360) * 800) * globalOctaveMultiplier;
+            
             if(!voices[id]) voices[id] = createVoice();
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
+            
             let hue = (angle / 360);
             currentRgb = [Math.abs(Math.sin(hue * 3.14)), 1.0, 0.5];
             if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)` };
         }
     }
 
-    window.addEventListener('touchstart', handleInput, {passive: false});
-    window.addEventListener('touchmove', handleInput, {passive: false});
-    window.addEventListener('touchend', () => { 
+    const ui = document.getElementById('main-ui');
+    ui.addEventListener('touchstart', handleInput, {passive: false});
+    ui.addEventListener('touchmove', handleInput, {passive: false});
+    ui.addEventListener('touchend', () => { 
         for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); 
         liveActive = false; 
     });
