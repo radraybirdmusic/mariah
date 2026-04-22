@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.67 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.68 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -19,7 +19,8 @@
             display: flex; 
             flex-direction: column; 
             justify-content: space-between;
-            padding-top: 100px; /* v1.67 GRID OFFSET: Ensures top rows are visible */
+            /* Dialed back: enough to clear the notch, but keeps the bottom clear */
+            padding-top: 45px; 
             pointer-events: none; 
         }
         
@@ -39,14 +40,14 @@
             border-radius: 50%; 
             background: rgba(8, 8, 8, 0.85); 
             position: relative; 
-            transition: transform 0.05s;
         }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
-        .bucket.active { transform: scale(1.35); z-index: 1000; box-shadow: 0 0 15px currentColor; }
+        .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 15px currentColor; }
         
         #controls { 
             width: 100%; 
-            padding-bottom: env(safe-area-inset-bottom, 10px); 
+            /* Ensures bottom controls sit tight to the bottom safe area */
+            padding-bottom: env(safe-area-inset-bottom, 15px); 
             pointer-events: auto; 
             display: flex; 
             flex-direction: column-reverse; 
@@ -68,7 +69,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.67 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.68 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -115,8 +116,8 @@
     const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform vec3 u_color; uniform int u_active;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
-        float dist = abs(uv.x - 0.5 + sin(uv.y * 12.0 + u_time * 2.0) * 0.03);
-        float line = smoothstep(0.06, 0.0, dist);
+        float dist = abs(uv.x - 0.5 + sin(uv.y * 10.0 + u_time) * 0.04);
+        float line = smoothstep(0.05, 0.0, dist);
         gl_FragColor = u_active == 1 ? vec4(u_color * line, 1.0) : vec4(0.0, 0.02, 0.0, 1.0);
     }`;
 
@@ -158,13 +159,13 @@
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0;
             let angle = (t.clientX / window.innerWidth) * 360;
-            let freq = (60 + (angle / 360) * 1200) * globalOctaveMultiplier;
+            let freq = (60 + (angle / 360) * 1000) * globalOctaveMultiplier;
             if(!voices[id]) voices[id] = createVoice();
             voices[id].osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
             voices[id].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
             
             let hue = (angle / 360);
-            currentRgb = [Math.abs(Math.sin(hue * 3.14)), 0.8, 0.5];
+            currentRgb = [Math.abs(Math.sin(hue * 3.14)), 0.7, 0.6];
             if(seq.rec) seq.data[seq.step] = { freq, color: `hsl(${hue * 360}, 100%, 50%)` };
         }
     }
