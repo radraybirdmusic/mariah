@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.82</title>
+    <title>CRi2 / MARIAH v1.83 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         
-        /* Canvas is the primary touch target now */
-        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; }
+        /* Canvas is back in the background where it doesn't block UI */
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
         #main-ui { 
-            position: fixed; 
-            top: 0; left: 0;
+            position: relative; 
             z-index: 100; 
             height: 100vh; 
             width: 100%; 
@@ -56,6 +55,8 @@
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
         .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
+        .btn.fx { border-color: #ff0; color: #ff0; }
+        .btn.kin { border-color: #f0f; color: #f0f; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 14px; padding: 10px; }
         .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
@@ -64,7 +65,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.82 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.83 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -88,7 +89,7 @@
             </div>
             <div class="row">
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
-                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3" oninput="if(masterGain) masterGain.gain.value = this.value"></div>
                 <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
             </div>
         </div>
@@ -113,22 +114,23 @@
     uniform int u_whir; uniform int u_rots; uniform int u_frac;
 
     void main() {
-        vec2 uv = (gl_FragCoord.xy / u_resolution) - 0.5;
+        vec2 uv = gl_FragCoord.xy / u_resolution;
         if(u_active == 0) { gl_FragColor = vec4(0.0, 0.02, 0.0, 1.0); return; }
         
-        if(u_rots == 1) { float s = sin(u_time), c = cos(u_time); uv *= mat2(c, -s, s, c); }
-        if(u_frac == 1) uv = fract(uv * 2.0) - 0.5;
-        if(u_whir == 1) { float dist = length(uv); float angle = atan(uv.y, uv.x) + dist * 5.0; uv = vec2(cos(angle), sin(angle)) * dist; }
+        // Return to the stable wiggle center logic
+        vec2 st = uv - 0.5;
+        if(u_rots == 1) { float s = sin(u_time), c = cos(u_time); st *= mat2(c, -s, s, c); }
+        if(u_frac == 1) st = fract(st * 2.0) - 0.5;
+        if(u_whir == 1) { float d = length(st); float a = atan(st.y, st.x) + d * 5.0; st = vec2(cos(a), sin(a)) * d; }
 
-        float freq = 12.0 + (u_wah * 30.0);
-        float xShift = sin(uv.y * freq + u_time * 6.0) * (0.05 + u_wah * 0.05);
-        if(u_sat == 1) xShift += sin(uv.y * 400.0) * 0.01;
+        float xOffset = sin(st.y * (15.0 + u_wah * 40.0) + u_time * 10.0) * (0.05 + u_wah * 0.05);
+        if(u_sat == 1) xOffset += sin(st.y * 600.0) * 0.005;
         
-        float d = abs(uv.x + xShift);
-        if(u_bit == 1) d = floor(d * 12.0) / 12.0;
+        float dist = abs(st.x + xOffset);
+        if(u_bit == 1) dist = floor(dist * 12.0) / 12.0;
         
-        float line = smoothstep(0.06, 0.0, d);
-        gl_FragColor = vec4(u_color * line, 1.0);
+        float line = smoothstep(0.06, 0.0, dist);
+        gl_FragColor = vec4(u_color * line, line + 0.1);
     }`;
 
     function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
@@ -158,6 +160,7 @@
 
     function handleInput(e) {
         setupEngine();
+        if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
         liveActive = true;
         let touches = e.touches || [e];
         for(let i=0; i<touches.length; i++) {
@@ -176,10 +179,10 @@
         }
     }
 
-    // Attach listeners directly to the canvas
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', () => { for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; });
+    // Stable global listeners
+    window.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') handleInput(e); }, {passive: false});
+    window.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') handleInput(e); }, {passive: false});
+    window.addEventListener('touchend', () => { for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; });
 
     setInterval(() => {
         if (!audioCtx) return;
@@ -196,9 +199,10 @@
                 voices['seq'] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain() };
                 voices['seq'].osc.connect(voices['seq'].gain); voices['seq'].gain.connect(masterGain); voices['seq'].osc.start();
             }
-            voices['seq'].osc.frequency.setTargetAtTime(seq.data[seq.step].freq, audioCtx.currentTime, 0.02);
+            let d = seq.data[seq.step];
+            voices['seq'].osc.frequency.setTargetAtTime(d.freq, audioCtx.currentTime, 0.02);
             voices['seq'].gain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.02);
-            currentRgb = seq.data[seq.step].rgb;
+            currentRgb = d.rgb;
             b.classList.add('active');
         } else if (voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
     }, 125);
