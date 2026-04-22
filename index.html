@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>CRi2 / MARIAH v1.75 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v1.76 - Kinetic Engine</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; height: 100vh; width: 100vw; }
@@ -18,7 +18,6 @@
             width: 100%; 
             display: flex; 
             flex-direction: column; 
-            /* Pulls top grid closer to the ceiling to save room for bottom */
             padding-top: env(safe-area-inset-top, 10px); 
             pointer-events: none; 
         }
@@ -37,39 +36,39 @@
             aspect-ratio: 1/1; 
             border: 1.2px solid #444; 
             border-radius: 50%; 
-            background: rgba(8, 8, 8, 0.85); 
+            background: rgba(10, 10, 10, 0.85); 
         }
         .bucket.playhead { border: 2px solid #fff !important; box-shadow: 0 0 10px #fff; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         
         #controls { 
             position: absolute;
-            /* v1.75: Lifted 5% off the bottom to ensure visibility on all mobile browsers */
-            bottom: 5%; 
+            /* v1.76: Lifted to 12% to move up one more "grid height" */
+            bottom: 12%; 
             left: 0;
             width: 100%; 
             padding-bottom: env(safe-area-inset-bottom, 5px); 
             pointer-events: auto; 
             display: flex; 
             flex-direction: column-reverse; 
-            gap: 3px; 
+            gap: 4px; 
             align-items: center; 
             background: rgba(0,0,0,0.85); 
             border-top: 1px solid #333;
         }
         
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 7px 9px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 10px; border-radius: 5px; min-width: 62px; touch-action: none; user-select: none; }
+        .btn { background: #000; border: 1.5px solid #0f0; color: #0f0; padding: 8px 10px; cursor: pointer; text-transform: uppercase; font-weight: 700; font-size: 11px; border-radius: 5px; min-width: 65px; touch-action: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 13px; padding: 8px; }
-        .slider-box { background: #111; padding: 4px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 150px; }
-        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 18px; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 92%; font-size: 14px; padding: 10px; margin-bottom: 2px; }
+        .slider-box { background: #111; padding: 5px 10px; border: 1.5px solid #0ff; border-radius: 5px; display: flex; align-items: center; width: 160px; }
+        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 20px; }
         
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 200000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v1.75 KINETIC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v1.76 KINETIC ENGINE<br>START CIRCUIT</div>
     <div id="main-ui">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -112,11 +111,11 @@
     }
 
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
-    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color;
+    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_active; uniform vec3 u_color;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution; 
         if(u_active == 0) { gl_FragColor = vec4(0.0, 0.02, 0.0, 1.0); return; }
-        float dist = abs(uv.x - 0.5 + sin(uv.y * 15.0 + u_time * 5.0) * 0.05);
+        float dist = abs(uv.x - 0.5 + sin(uv.y * 12.0 + u_time * 4.0) * 0.05);
         float line = smoothstep(0.05, 0.0, dist);
         gl_FragColor = vec4(u_color * line, 1.0);
     }`;
