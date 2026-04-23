@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.09 - Real-Time Tracker Sync</title>
+    <title>CRi2 / MARIAH v2.10 - Universal Sync</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -33,7 +33,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.09 SYNC ENGINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.10 UNIVERSAL SYNC<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -155,10 +155,15 @@
 
     function createVoice() {
         let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
-        v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0; v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
+        v.lfo.frequency.value = 10; 
+        v.lfoG.gain.value = mods.wind ? 15 : 0; 
+        v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
         v.gain.gain.value = 0; v.osc.connect(v.gain); 
-        // Logic: Always connect based on CURRENT state
-        v.gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
+        
+        // Link to Ring Mod if active
+        if (mods.ring) { v.gain.connect(ringGain); ringGain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode)); }
+        else { v.gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode)); }
+        
         if(currentChip !== 'DEFAULT') v.osc.type = chipModes[currentChip].type;
         v.osc.start(); return v;
     }
@@ -173,6 +178,7 @@
     function setFreq(v, angle, forceSnap = false) {
         if (!v || !v.osc) return;
         let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctaveMultiplier;
+        if (mods.spring) base += springVal;
         if(currentChip === 'DEFAULT') v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
         if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
         else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
@@ -181,24 +187,16 @@
         currentRgb = hslToRgb(hue/360, 1, 0.5);
     }
 
-    function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.09", sequence: seq.data });
-        const blob = new Blob([songData], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url; link.download = `mariah_mod_${Date.now()}.json`;
-        document.body.appendChild(link); link.click();
-        document.body.removeChild(link); URL.revokeObjectURL(url);
-    }
-
     function toggleMod(m) { 
         setupEngine(); mods[m] = !mods[m]; let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)); if(el) el.classList.toggle('active', mods[m]);
         if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
         if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?0.2:0, audioCtx.currentTime, 0.1);
-        // SURGICAL FIX: Re-route ALL voices including sequence voice when buttons are pressed
+        
         for(let id in voices) if(voices[id]){ 
             voices[id].gain.disconnect(); 
-            voices[id].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); 
+            if(mods.ring) { voices[id].gain.connect(ringGain); ringGain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
+            else { voices[id].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
+            if(id !== 'seq' || !seq.play) voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1);
         }
     }
 
@@ -213,7 +211,7 @@
             if(!voices[id]) voices[id] = createVoice();
             setFreq(voices[id], angle);
             voices[id].gain.gain.setTargetAtTime(bGain, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})`, oct: globalOctaveMultiplier, fx: {...mods}, chip: currentChip };
+            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})`, oct: globalOctaveMultiplier };
         }
     }
 
@@ -233,17 +231,19 @@
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
                 
-                // SURGICAL FIX: The Sequencer voice now pulls from CURRENT Global Octave and CURRENT Chip
+                // Real-time Sync for Sequencer Voice
                 let base = (mods.fae ? (2000 - (d.a / 360) * 1960) : (40 + (d.a / 360) * 760)) * globalOctaveMultiplier;
+                if (mods.spring) base += springVal;
                 
-                // If a chip is active, force it. Otherwise, use standard toggle logic.
                 voices['seq'].osc.type = currentChip !== 'DEFAULT' ? chipModes[currentChip].type : (mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth'));
-                
                 voices['seq'].osc.frequency.setTargetAtTime(base, audioCtx.currentTime, 0.02);
                 
-                // Dynamic routing: Sequence voice follows your button presses LIVE
+                // Sync Wind LFO for sequencer
+                voices['seq'].lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.05);
+
                 voices['seq'].gain.disconnect(); 
-                voices['seq'].gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
+                if(mods.ring) { voices['seq'].gain.connect(ringGain); ringGain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
+                else { voices['seq'].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
                 
                 voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
                 if(ab) ab.classList.add('active');
@@ -261,6 +261,15 @@
         gl.uniform1f(uLocs.wah, mods.wah?1.0:0.0); gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
         gl.uniform1i(uLocs.active, (liveActive||seq.play)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
+    }
+    function saveTrackerMod() {
+        const songData = JSON.stringify({ version: "2.10", sequence: seq.data });
+        const blob = new Blob([songData], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = `mariah_mod_${Date.now()}.json`;
+        document.body.appendChild(link); link.click();
+        document.body.removeChild(link); URL.revokeObjectURL(url);
     }
     function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
     function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
