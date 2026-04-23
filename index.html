@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.05 - Kinetic Engine</title>
+    <title>CRi2 / MARIAH v2.07 - Tracker Edition</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -14,13 +14,10 @@
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 1px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
         .fae-active .bucket.playhead { border-color: #000; box-shadow: 0 0 5px #000; }
-        
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-
         .btn { background: #000; border: 2px solid #0f0; color: #0f0; padding: 20px 15px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 10px; min-width: 100px; touch-action: none; user-select: none; }
-        
         .fae-active .btn { background: #fff; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.fx { border-color: #ff0; color: #ff0; }
@@ -29,7 +26,6 @@
         .btn.kin.active { background: #f0f !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 22px; padding: 20px; min-width: auto; }
         .btn.step { min-width: 45px; padding: 20px 5px; }
-        
         .slider-box { background: #111; padding: 8px 12px; border: 2px solid #0ff; border-radius: 10px; display: flex; align-items: center; width: 220px; }
         .fae-active .slider-box { background: #eee; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 30px; }
@@ -37,7 +33,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.05 LOCKED BASELINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.07 TRACKER<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -68,6 +64,7 @@
                 <button id="btnTheremin" class="btn" ontouchstart="toggleMod('theremin')">THEREMIN</button>
                 <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play')">PLAY</button>
+                <button id="btnSave" class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="saveTrackerMod()">SAVE</button>
                 <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
             </div>
             <div class="row">
@@ -169,11 +166,16 @@
     }
 
     function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); for(let id in voices) if(id !== 'seq' && voices[id]) setFreq(voices[id], voices[id].lastAngle, true); updateBucketColors(); }
-    function updateBucketColors() { for(let i=0; i<64; i++) { if(seq.data[i]) { let angle = seq.data[i].a; let hue = (angle/360)*285; if(mods.fae) hue = 285-hue; let rgb = hslToRgb(hue/360, 1, 0.5); seq.data[i].c = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`; let b = document.getElementById('bucket-' + i); if(b) b.style.backgroundColor = seq.data[i].c; } } }
-    function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
-    function adjustSpring(amt) { springVal = Math.max(0, Math.min(200, springVal + amt)); }
-    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
-    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
+    
+    function saveTrackerMod() {
+        const songData = JSON.stringify({ version: "2.07", sequence: seq.data });
+        const blob = new Blob([songData], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = `mariah_mod_${Date.now()}.json`;
+        document.body.appendChild(link); link.click();
+        document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
 
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
@@ -184,7 +186,9 @@
             if(!voices[id]) voices[id] = createVoice();
             setFreq(voices[id], angle);
             voices[id].gain.gain.setTargetAtTime(bGain, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})` };
+            if(seq.rec) {
+                seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})`, oct: globalOctaveMultiplier, fx: {...mods} };
+            }
         }
     }
 
@@ -196,13 +200,17 @@
 
     setInterval(() => {
         if (!audioCtx) return;
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active'); b.classList.remove('playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
+        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
         if(seq.data[seq.step]) {
             let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
-                setFreq(voices['seq'], d.a);
+                let recordedOct = d.oct || 1.0;
+                let base = (d.fx.fae ? (2000 - (d.a / 360) * 1960) : (40 + (d.a / 360) * 760)) * recordedOct;
+                voices['seq'].osc.type = d.fx.theremin ? 'sine' : (d.fx.fae ? 'triangle' : 'sawtooth');
+                voices['seq'].osc.frequency.setTargetAtTime(base, audioCtx.currentTime, 0.02);
+                voices['seq'].gain.disconnect(); voices['seq'].gain.connect(d.fx.sat ? satNode : (d.fx.gran ? delayNode : filterNode));
                 voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
                 if(ab) ab.classList.add('active');
             }
@@ -220,7 +228,12 @@
         gl.uniform1i(uLocs.active, (liveActive||seq.play)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
+    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
+    function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
+    function adjustSpring(amt) { springVal = Math.max(0, Math.min(200, springVal + amt)); }
+    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
     requestAnimationFrame(render);
 </script>
 </body>
 </html>
+
