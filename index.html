@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.13 - Kinetic Audio Sync</title>
+    <title>CRi2 / MARIAH v2.15 - Notch Clearance Edition</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 100px; pointer-events: auto; }
+        
+        /* v2.15 LAYOUT: Clears the mobile notch */
+        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 160px; pointer-events: auto; }
+        
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 15px auto 0 auto; pointer-events: auto; }
@@ -16,6 +19,7 @@
         .fae-active .bucket { border-color: #ddd; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 1px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
+        
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
@@ -33,7 +37,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.13 KINETIC AUDIO<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.15 REVISION MASTER<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -172,13 +176,10 @@
     function setFreq(v, angle, forceSnap = false) {
         if (!v || !v.osc) return;
         let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctaveMultiplier;
-        
-        // v2.13 KINETIC AUDIO ENGINE
         if (mods.spring) base += springVal;
         if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
         if (mods.rots) base *= (1.0 + Math.sin(audioCtx.currentTime * 2) * 0.1);
         if (mods.frac) base += (Math.random() - 0.5) * 100;
-
         if(currentChip === 'DEFAULT') v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
         if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
         else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
@@ -225,24 +226,17 @@
         if (!audioCtx) return;
         document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
-        
         seqActive = (seq.play && seq.data[seq.step]) ? true : false;
-
         if(seq.data[seq.step]) {
             let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
-                
-                // v2.13 KINETIC SYNC: Inject Kinetic math into playhead voice
                 setFreq(voices['seq'], d.a); 
-                
                 voices['seq'].osc.type = currentChip !== 'DEFAULT' ? chipModes[currentChip].type : (mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth'));
                 voices['seq'].lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.05);
-
                 voices['seq'].gain.disconnect(); 
                 if(mods.ring) { voices['seq'].gain.connect(ringGain); ringGain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
                 else { voices['seq'].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
-                
                 voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
                 if(ab) ab.classList.add('active');
             }
@@ -262,7 +256,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.13", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.15", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
