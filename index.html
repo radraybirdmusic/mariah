@@ -2,26 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.08 - Tracker State Engine</title>
+    <title>CRi2 / MARIAH v2.09 - Real-Time Tracker Sync</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        
-        /* TOP CHIP ROW - State/Tracker Side */
         #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 100px; pointer-events: auto; }
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
-
-        /* BUCKET GRID */
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 15px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
         .fae-active .bucket { border-color: #ddd; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 1px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
-        
-        /* BOTTOM CONTROLS - Performance Side */
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
@@ -39,7 +33,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.08 TRACKER CHASSIS<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.09 SYNC ENGINE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -162,7 +156,9 @@
     function createVoice() {
         let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
         v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0; v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-        v.gain.gain.value = 0; v.osc.connect(v.gain); v.gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
+        v.gain.gain.value = 0; v.osc.connect(v.gain); 
+        // Logic: Always connect based on CURRENT state
+        v.gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
         if(currentChip !== 'DEFAULT') v.osc.type = chipModes[currentChip].type;
         v.osc.start(); return v;
     }
@@ -186,7 +182,7 @@
     }
 
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.08", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.09", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -199,7 +195,11 @@
         setupEngine(); mods[m] = !mods[m]; let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)); if(el) el.classList.toggle('active', mods[m]);
         if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
         if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?0.2:0, audioCtx.currentTime, 0.1);
-        for(let id in voices) if(voices[id]){ voices[id].gain.disconnect(); voices[id].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
+        // SURGICAL FIX: Re-route ALL voices including sequence voice when buttons are pressed
+        for(let id in voices) if(voices[id]){ 
+            voices[id].gain.disconnect(); 
+            voices[id].gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); 
+        }
     }
 
     function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); for(let id in voices) if(id !== 'seq' && voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
@@ -232,11 +232,19 @@
             let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
-                let recordedOct = d.oct || 1.0;
-                let base = (d.fx.fae ? (2000 - (d.a / 360) * 1960) : (40 + (d.a / 360) * 760)) * recordedOct;
-                voices['seq'].osc.type = d.chip !== 'DEFAULT' ? chipModes[d.chip].type : (d.fx.theremin ? 'sine' : (d.fx.fae ? 'triangle' : 'sawtooth'));
+                
+                // SURGICAL FIX: The Sequencer voice now pulls from CURRENT Global Octave and CURRENT Chip
+                let base = (mods.fae ? (2000 - (d.a / 360) * 1960) : (40 + (d.a / 360) * 760)) * globalOctaveMultiplier;
+                
+                // If a chip is active, force it. Otherwise, use standard toggle logic.
+                voices['seq'].osc.type = currentChip !== 'DEFAULT' ? chipModes[currentChip].type : (mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth'));
+                
                 voices['seq'].osc.frequency.setTargetAtTime(base, audioCtx.currentTime, 0.02);
-                voices['seq'].gain.disconnect(); voices['seq'].gain.connect(d.fx.sat ? satNode : (d.fx.gran ? delayNode : filterNode));
+                
+                // Dynamic routing: Sequence voice follows your button presses LIVE
+                voices['seq'].gain.disconnect(); 
+                voices['seq'].gain.connect(mods.sat ? satNode : (mods.gran ? delayNode : filterNode));
+                
                 voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
                 if(ab) ab.classList.add('active');
             }
