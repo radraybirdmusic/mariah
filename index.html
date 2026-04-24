@@ -2,23 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.17 - Max Clearance</title>
+    <title>CRi2 / MARIAH v2.18 - FAE Visibility</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* v2.17 LAYOUT: Maximum Drop to 320px to clear the deepest notch/island */
         #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 320px; pointer-events: auto; }
-        
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
+        
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
-        .fae-active .bucket { border-color: #ddd; }
+        .fae-active .bucket { border-color: rgba(0,0,0,0.2); background: #eee; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
-        .bucket.playhead { border: 1px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
+        
+        /* PLAYHEAD: White in dark, Black in FAE */
+        .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
+        .fae-active .bucket.playhead { border: 2px solid #000; box-shadow: 0 0 5px #000; }
         
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
@@ -37,7 +39,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.17 MAX CLEARANCE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.18 FAE VISIBILITY<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -153,7 +155,8 @@
     function setChip(mode) {
         setupEngine(); currentChip = mode;
         document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase()).classList.add('active');
+        const targetBtn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase());
+        if(targetBtn) targetBtn.classList.add('active');
         for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type;
     }
 
@@ -200,7 +203,7 @@
         }
     }
 
-    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); for(let id in voices) if(id !== 'seq' && voices[id]) setFreq(voices[id], voices[id].lastAngle, true); }
+    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); for(let id in voices) if(id !== 'seq' && voices[id]) setFreq(voices[id], voices[id].lastAngle, true); updateBucketVis(); }
 
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
@@ -215,6 +218,13 @@
         }
     }
 
+    function updateBucketVis() {
+        seq.data.forEach((d, i) => {
+            let b = document.getElementById('bucket-' + i);
+            if (b && d) b.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.8)') : d.c;
+        });
+    }
+
     function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
     
@@ -224,11 +234,19 @@
 
     setInterval(() => {
         if (!audioCtx) return;
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor='#080808'; });
+        document.querySelectorAll('.bucket').forEach(b => { 
+            b.classList.remove('active', 'playhead'); 
+            if(!b.classList.contains('filled')) b.style.backgroundColor = mods.fae ? '#eee' : '#080808'; 
+        });
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
         seqActive = (seq.play && seq.data[seq.step]) ? true : false;
         if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = d.c; }
+            let d = seq.data[seq.step]; 
+            if(ab) { 
+                ab.classList.add('filled'); 
+                // HIGH CONTRAST INJECTION: Darker tones for FAE mode
+                ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c;
+            }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
                 setFreq(voices['seq'], d.a); 
@@ -256,7 +274,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.17", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.18", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
