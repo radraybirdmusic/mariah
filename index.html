@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.21 - Performance Lockdown</title>
+    <title>CRi2 / MARIAH v2.22 - Chakra Restoration</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.21 HARD LINE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.22 CHAKRA RESTORE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -187,6 +187,21 @@
         if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
         else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
         v.lastAngle = angle;
+
+        // CHAKRA COLOR LOGIC RESTORED
+        let hue = (angle/360)*285; if(mods.fae) hue = 285-hue;
+        let rgb = hslToRgb(hue/360, 1, 0.5);
+        if (v !== voices['seq']) { currentRgb = rgb; } 
+        return `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
+    }
+
+    function stopAll() {
+        seq.play = false; seq.rec = false; seq.step = 0;
+        document.getElementById('btnPlay').classList.remove('active');
+        document.getElementById('btnRec').classList.remove('active');
+        for(let id in voices) { if(voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
+        // Clean release of the sequencer voice
+        if(voices['seq']) { voices['seq'].osc.stop(); delete voices['seq']; }
     }
 
     function toggleMod(m) { 
@@ -204,13 +219,6 @@
         }
     }
 
-    function stopAll() {
-        seq.play = false; seq.rec = false; seq.step = 0;
-        document.getElementById('btnPlay').classList.remove('active');
-        document.getElementById('btnRec').classList.remove('active');
-        for(let id in voices) { if(voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
-    }
-
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
         liveActive = true; let touches = e.touches || [e];
@@ -218,9 +226,9 @@
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0; let angle = (t.clientX / window.innerWidth) * 360;
             if(!voices[id]) voices[id] = createVoice();
-            setFreq(voices[id], angle);
+            let chakraColor = setFreq(voices[id], angle);
             voices[id].gain.gain.setTargetAtTime(bGain, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})` };
+            if(seq.rec) seq.data[seq.step] = { a: angle, c: chakraColor };
         }
     }
 
@@ -240,13 +248,18 @@
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
         seqActive = (seq.play && seq.data[seq.step]) ? true : false;
         
-        if(seq.play && voices['seq']) {
+        if(seq.play) {
             let d = seq.data[seq.step];
             if(d) {
+                if(!voices['seq']) voices['seq'] = createVoice();
                 setFreq(voices['seq'], d.a);
-                syncRouting(voices['seq']); // HARD LINE: Force re-routing every step
+                syncRouting(voices['seq']);
                 voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
-            } else {
+                // Sync shader color to playback
+                let hue = (d.a/360)*285; if(mods.fae) hue = 285-hue;
+                currentRgb = hslToRgb(hue/360, 1, 0.5);
+                if(ab) ab.classList.add('active');
+            } else if(voices['seq']) {
                 voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
             }
         }
@@ -254,8 +267,6 @@
         if(seq.data[seq.step]) {
             let d = seq.data[seq.step]; 
             if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c; }
-            if(seq.play && !voices['seq']) voices['seq'] = createVoice();
-            if(seq.play && ab) ab.classList.add('active');
         }
         seq.step = (seq.step + 1) % 64;
     }, 125); 
@@ -271,7 +282,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.21", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.22", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
