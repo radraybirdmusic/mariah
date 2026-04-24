@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.20 - Performance Overdrive</title>
+    <title>CRi2 / MARIAH v2.21 - Performance Lockdown</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -20,7 +20,7 @@
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
-        .btn { background: #000; border: 2px solid #0f0; color: #0f0; padding: 20px 15px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 10px; min-width: 100px; touch-action: none; user-select: none; }
+        .btn { background: #000; border: 2px solid #0f0; color: #0f0; padding: 20px 15px; cursor: pointer; text-transform: uppercase; font-weight: 900; font-size: 18px; border-radius: 10px; min-width: 90px; touch-action: none; user-select: none; }
         .btn.active { background: #0f0 !important; color: #000 !important; }
         .btn.fx { border-color: #ff0; color: #ff0; }
         .btn.fx.active { background: #ff0 !important; color: #000 !important; }
@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.20 PERFORMANCE MASTER<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.21 HARD LINE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -73,6 +73,7 @@
                 <button id="btnTheremin" class="btn" ontouchstart="toggleMod('theremin')">THEREMIN</button>
                 <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleSeq('rec')">REC</button>
                 <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play')">PLAY</button>
+                <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" ontouchstart="stopAll()">STOP</button>
                 <button id="btnSave" class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="saveTrackerMod()">SAVE</button>
                 <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
             </div>
@@ -162,6 +163,7 @@
     }
 
     function syncRouting(v) {
+        if (!v || !v.gain) return;
         v.gain.disconnect();
         if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
         else { v.gain.connect(mods.sat?satNode:(mods.gran?delayNode:filterNode)); }
@@ -181,25 +183,33 @@
         if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
         if (mods.rots) base *= (1.0 + Math.sin(audioCtx.currentTime * 2) * 0.1);
         if (mods.frac) base += (Math.random() - 0.5) * 100;
-
         v.osc.type = currentChip !== 'DEFAULT' ? chipModes[currentChip].type : (mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth'));
         if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
         else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
         v.lastAngle = angle;
-        if (v !== voices['seq']) {
-            let hue = (angle/360)*285; if(mods.fae) hue = 285-hue;
-            currentRgb = hslToRgb(hue/360, 1, 0.5);
-        }
     }
 
     function toggleMod(m) { 
-        setupEngine(); mods[m] = !mods[m]; let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)); if(el) el.classList.toggle('active', mods[m]);
+        setupEngine(); mods[m] = !mods[m]; 
+        let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)); 
+        if(el) el.classList.toggle('active', mods[m]);
         if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
-        if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?0.2:0, audioCtx.currentTime, 0.1);
-        for(let id in voices) if(voices[id]){ syncRouting(voices[id]); voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); }
+        if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?ghostForce:0, audioCtx.currentTime, 0.1);
+        for(let id in voices) {
+            if(voices[id]){ 
+                syncRouting(voices[id]); 
+                voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); 
+                setFreq(voices[id], voices[id].lastAngle);
+            } 
+        }
     }
 
-    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle, true); updateBucketVis(); }
+    function stopAll() {
+        seq.play = false; seq.rec = false; seq.step = 0;
+        document.getElementById('btnPlay').classList.remove('active');
+        document.getElementById('btnRec').classList.remove('active');
+        for(let id in voices) { if(voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
+    }
 
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
@@ -214,12 +224,8 @@
         }
     }
 
-    function updateBucketVis() {
-        seq.data.forEach((d, i) => {
-            let b = document.getElementById('bucket-' + i);
-            if (b && d) b.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.8)') : d.c;
-        });
-    }
+    function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); if(mods.ghst) ghostGain.gain.setTargetAtTime(ghostForce, audioCtx.currentTime, 0.1); }
+    function adjustSpring(amt) { springVal = Math.max(-400, Math.min(400, springVal + amt)); for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
 
     function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
@@ -234,21 +240,22 @@
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
         seqActive = (seq.play && seq.data[seq.step]) ? true : false;
         
-        // v2.20 REAL-TIME RE-CALCULATION
-        if(seq.play && voices['seq']) { 
-            let curData = seq.data[seq.step];
-            if(curData) setFreq(voices['seq'], curData.a);
-            else voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        if(seq.play && voices['seq']) {
+            let d = seq.data[seq.step];
+            if(d) {
+                setFreq(voices['seq'], d.a);
+                syncRouting(voices['seq']); // HARD LINE: Force re-routing every step
+                voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
+            } else {
+                voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+            }
         }
 
         if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c; }
-            if(seq.play) {
-                if(!voices['seq']) voices['seq'] = createVoice();
-                setFreq(voices['seq'], d.a); 
-                voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
-                if(ab) ab.classList.add('active');
-            }
+            let d = seq.data[seq.step]; 
+            if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c; }
+            if(seq.play && !voices['seq']) voices['seq'] = createVoice();
+            if(seq.play && ab) ab.classList.add('active');
         }
         seq.step = (seq.step + 1) % 64;
     }, 125); 
@@ -264,7 +271,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.20", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.21", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -272,10 +279,9 @@
         document.body.appendChild(link); link.click();
         document.body.removeChild(link); URL.revokeObjectURL(url);
     }
-    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let i in voices) if(voices[i]) setFreq(voices[i], voices[i].lastAngle, true); }
-    function adjustGhost(amt) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce + amt)); }
-    function adjustSpring(amt) { springVal = Math.max(0, Math.min(200, springVal + amt)); }
+    function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
+    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); }
     requestAnimationFrame(render);
 </script>
 </body>
