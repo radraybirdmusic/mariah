@@ -2,26 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.18 - FAE Visibility</title>
+    <title>CRi2 / MARIAH v2.19 - Signal Path Verified</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        
         #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 320px; pointer-events: auto; }
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
-        
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
         .fae-active .bucket { border-color: rgba(0,0,0,0.2); background: #eee; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
-        
-        /* PLAYHEAD: White in dark, Black in FAE */
         .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
         .fae-active .bucket.playhead { border: 2px solid #000; box-shadow: 0 0 5px #000; }
-        
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
@@ -39,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.18 FAE VISIBILITY<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.19 FULL SIGNAL VERIFIED<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -132,10 +127,7 @@
     let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
     let liveActive = false, seqActive = false, globalOctaveMultiplier = 1.0, currentRgb = [0, 1, 0.5], springVal = 0, ghostForce = 0.5, currentChip = 'DEFAULT';
 
-    const chipModes = {
-        'Z80': { type: 'square' }, 'PAULA': { type: 'sawtooth' }, 'SID': { type: 'triangle' },
-        'OPL3': { type: 'sine' }, 'SPC': { type: 'sawtooth' }, 'NES': { type: 'square' }
-    };
+    const chipModes = { 'Z80': { type: 'square' }, 'PAULA': { type: 'sawtooth' }, 'SID': { type: 'triangle' }, 'OPL3': { type: 'sine' }, 'SPC': { type: 'sawtooth' }, 'NES': { type: 'square' } };
 
     function setupEngine() {
         if (audioCtx) return;
@@ -155,8 +147,8 @@
     function setChip(mode) {
         setupEngine(); currentChip = mode;
         document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active'));
-        const targetBtn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase());
-        if(targetBtn) targetBtn.classList.add('active');
+        const btn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase());
+        if(btn) btn.classList.add('active');
         for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type;
     }
 
@@ -179,10 +171,13 @@
     function setFreq(v, angle, forceSnap = false) {
         if (!v || !v.osc) return;
         let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctaveMultiplier;
+        
+        // VERIFIED SIGNAL PATH: These must be added to the frequency before the glide logic
         if (mods.spring) base += springVal;
         if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
         if (mods.rots) base *= (1.0 + Math.sin(audioCtx.currentTime * 2) * 0.1);
         if (mods.frac) base += (Math.random() - 0.5) * 100;
+
         if(currentChip === 'DEFAULT') v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
         if (forceSnap) v.osc.frequency.setValueAtTime(base, audioCtx.currentTime);
         else v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.35 : 0.05);
@@ -214,7 +209,7 @@
             if(!voices[id]) voices[id] = createVoice();
             setFreq(voices[id], angle);
             voices[id].gain.gain.setTargetAtTime(bGain, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})`, oct: globalOctaveMultiplier };
+            if(seq.rec) seq.data[seq.step] = { a: angle, c: `rgb(${currentRgb[0]*255},${currentRgb[1]*255},${currentRgb[2]*255})` };
         }
     }
 
@@ -234,19 +229,11 @@
 
     setInterval(() => {
         if (!audioCtx) return;
-        document.querySelectorAll('.bucket').forEach(b => { 
-            b.classList.remove('active', 'playhead'); 
-            if(!b.classList.contains('filled')) b.style.backgroundColor = mods.fae ? '#eee' : '#080808'; 
-        });
+        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor = mods.fae ? '#eee' : '#080808'; });
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
         seqActive = (seq.play && seq.data[seq.step]) ? true : false;
         if(seq.data[seq.step]) {
-            let d = seq.data[seq.step]; 
-            if(ab) { 
-                ab.classList.add('filled'); 
-                // HIGH CONTRAST INJECTION: Darker tones for FAE mode
-                ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c;
-            }
+            let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c; }
             if(seq.play) {
                 if(!voices['seq']) voices['seq'] = createVoice();
                 setFreq(voices['seq'], d.a); 
@@ -269,12 +256,11 @@
         gl.uniform1i(uLocs.ring, mods.ring?1:0); gl.uniform1f(uLocs.spring, springVal);
         gl.uniform1i(uLocs.sat, mods.sat?1:0); gl.uniform1i(uLocs.bit, mods.bit?1:0);
         gl.uniform1f(uLocs.wah, mods.wah?1.0:0.0); gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
-        gl.uniform1i(uLocs.active, (liveActive || seqActive)?1:0); 
-        gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
+        gl.uniform1i(uLocs.active, (liveActive || seqActive)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.18", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.19", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
