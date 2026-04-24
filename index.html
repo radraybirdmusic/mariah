@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.23 - FX Continuity</title>
+    <title>CRi2 / MARIAH v2.24 - Live Signal Restore</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.23 FX CONTINUITY<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.24 LIVE RESTORE<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -135,24 +135,18 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         masterGain = audioCtx.createGain(); masterGain.gain.value = document.getElementById('volSlider').value; masterGain.connect(audioCtx.destination);
         
-        satNode = audioCtx.createWaveShaper(); 
-        let curve = new Float32Array(44100); 
-        for (let i=0; i<44100; i++) { 
-            let x = i*2/44100-1; 
-            curve[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); 
-        }
-        satNode.curve = curve; 
-
         filterNode = audioCtx.createBiquadFilter(); 
         filterNode.type = 'lowpass'; 
         filterNode.frequency.value = 20000; 
-
-        // SIGNAL CHAIN: FX -> FILTER -> MASTER
-        satNode.connect(filterNode);
         filterNode.connect(masterGain);
 
-        delayNode = audioCtx.createDelay(1.0); 
-        delayNode.delayTime.value = 0.3; 
+        satNode = audioCtx.createWaveShaper(); 
+        let curve = new Float32Array(44100); 
+        for (let i=0; i<44100; i++) { let x = i*2/44100-1; curve[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); }
+        satNode.curve = curve; 
+        satNode.connect(filterNode);
+
+        delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3; 
         let fb = audioCtx.createGain(); fb.gain.value = 0.5; 
         delayNode.connect(fb); fb.connect(delayNode); 
         delayNode.connect(satNode);
@@ -173,9 +167,9 @@
     function syncRouting(v) {
         if (!v || !v.gain) return;
         v.gain.disconnect();
-        let target = mods.gran ? delayNode : satNode;
-        if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(target); }
-        else { v.gain.connect(target); }
+        let fxDest = mods.gran ? delayNode : (mods.sat ? satNode : filterNode);
+        if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(fxDest); }
+        else { v.gain.connect(fxDest); }
     }
 
     function setFreq(v, angle, forceSnap = false) {
@@ -201,29 +195,9 @@
         setupEngine(); mods[m] = !mods[m]; 
         let el = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)); 
         if(el) el.classList.toggle('active', mods[m]);
-        
-        // WAH Live Update
         if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?600:20000, audioCtx.currentTime, 0.1);
         if(m==='ghst') ghostGain.gain.setTargetAtTime(mods.ghst?ghostForce:0, audioCtx.currentTime, 0.1);
-        
-        // BIT Logic Injection
-        if(m==='bit') { /* Handled in shader + potential future ScriptProcessor */ }
-
-        for(let id in voices) {
-            if(voices[id]){ 
-                syncRouting(voices[id]); 
-                voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); 
-                setFreq(voices[id], voices[id].lastAngle);
-            } 
-        }
-    }
-
-    function setChip(mode) {
-        setupEngine(); currentChip = mode;
-        document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active'));
-        const btn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase());
-        if(btn) btn.classList.add('active');
-        for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type;
+        for(let id in voices) { if(voices[id]){ syncRouting(voices[id]); voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); setFreq(voices[id], voices[id].lastAngle); } }
     }
 
     function stopAll() {
@@ -242,6 +216,7 @@
             let t = touches[i], id = t.identifier || 0; let angle = (t.clientX / window.innerWidth) * 360;
             if(!voices[id]) voices[id] = createVoice();
             let chakraColor = setFreq(voices[id], angle);
+            syncRouting(voices[id]); // FORCE LIVE ROUTING
             voices[id].gain.gain.setTargetAtTime(bGain, audioCtx.currentTime, 0.05);
             if(seq.rec) seq.data[seq.step] = { a: angle, c: chakraColor };
         }
@@ -272,9 +247,7 @@
                 let hue = (d.a/360)*285; if(mods.fae) hue = 285-hue;
                 currentRgb = hslToRgb(hue/360, 1, 0.5);
                 if(ab) ab.classList.add('active');
-            } else if(voices['seq']) {
-                voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-            }
+            } else if(voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
         }
         if(seq.data[seq.step]) {
             let d = seq.data[seq.step]; 
@@ -294,7 +267,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
     function saveTrackerMod() {
-        const songData = JSON.stringify({ version: "2.23", sequence: seq.data });
+        const songData = JSON.stringify({ version: "2.24", sequence: seq.data });
         const blob = new Blob([songData], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -302,6 +275,7 @@
         document.body.appendChild(link); link.click();
         document.body.removeChild(link); URL.revokeObjectURL(url);
     }
+    function setChip(mode) { setupEngine(); currentChip = mode; document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active')); const btn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase()); if(btn) btn.classList.add('active'); for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type; }
     function shiftOct(m) { setupEngine(); globalOctaveMultiplier *= m; for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
     function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); }
