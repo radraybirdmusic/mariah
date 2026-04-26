@@ -2,23 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.34 - Multi-Bank Tracker</title>
+    <title>CRi2 / MARIAH v2.35 - Ghost Soul Restore</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; position: fixed; top: 0; left: 0; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* v2.34 Tracker Controls */
         #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 140px; pointer-events: auto; }
         #bank-row { display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 10px; pointer-events: auto; }
-        
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 10px 4px; font-size: 12px; min-width: 55px; border-radius: 6px; cursor: pointer; }
         .btn.bank { background: #000; border: 2px solid #fff; color: #fff; padding: 8px 15px; font-size: 14px; border-radius: 4px; cursor: pointer; }
-        .btn.bank.active { background: #fff !important; color: #000 !important; box-shadow: 0 0 10px #fff; }
-        .btn.all { border-color: #f0f; color: #f0f; }
-        .btn.all.active { background: #f0f !important; color: #000 !important; }
-
+        .btn.bank.active { background: #fff !important; color: #000 !important; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
 
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
@@ -26,7 +21,6 @@
         .fae-active .bucket { border-color: rgba(0,0,0,0.2); background: #eee; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
-        .fae-active .bucket.playhead { border: 2px solid #000; box-shadow: 0 0 5px #000; }
 
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 25px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
@@ -39,12 +33,13 @@
         .btn.kin { border-color: #f0f; color: #f0f; } 
         .btn.kin.active { background: #f0f !important; color: #000 !important; }
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 20px; padding: 15px; min-width: auto; }
+        .btn.step { min-width: 45px; padding: 18px 5px; }
         
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 1000000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.34 MULTI-BANK TRACKER<br>TAP TO START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.35 GHOST SOUL RESTORE<br>TAP TO START CIRCUIT</div>
     <canvas id="vortexCanvas"></canvas>
     <div id="ui-layer">
         <div id="chip-row">
@@ -60,7 +55,7 @@
             <button id="bank1" class="btn bank" ontouchstart="setBank(1)">P2</button>
             <button id="bank2" class="btn bank" ontouchstart="setBank(2)">P3</button>
             <button id="bank3" class="btn bank" ontouchstart="setBank(3)">P4</button>
-            <button id="btnAllPlay" class="btn bank all" ontouchstart="toggleAllPlay()">ALL</button>
+            <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" ontouchstart="toggleAllPlay()">ALL</button>
         </div>
         <div id="bucket-grid"></div>
         <div id="controls">
@@ -69,7 +64,9 @@
                 <button id="btnWhir" class="btn kin" ontouchstart="toggleMod('whir')">WHIR</button>
                 <button id="btnRots" class="btn kin" ontouchstart="toggleMod('rots')">ROTS</button>
                 <button id="btnFrac" class="btn kin" ontouchstart="toggleMod('frac')">FRAC</button>
+                <button class="btn step" ontouchstart="adjustGhost(-0.1)">-</button>
                 <button id="btnGhst" class="btn kin" ontouchstart="toggleMod('ghst')">GHST</button>
+                <button class="btn step" ontouchstart="adjustGhost(0.1)">+</button>
             </div>
             <div class="row">
                 <button id="btnSat" class="btn fx" ontouchstart="toggleMod('sat')">SAT</button>
@@ -80,7 +77,9 @@
             <div class="row">
                 <button id="btnWind" class="btn" ontouchstart="toggleMod('wind')">WIND</button>
                 <button id="btnRing" class="btn" ontouchstart="toggleMod('ring')">RING</button>
+                <button class="btn step" ontouchstart="adjustSpring(-20)">-</button>
                 <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring')">SPRING</button>
+                <button class="btn step" ontouchstart="adjustSpring(20)">+</button>
             </div>
             <div class="row">
                 <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow')">EBOW</button>
@@ -101,11 +100,11 @@
     for(let i=0; i<64; i++) { let b = document.createElement('div'); b.className = 'bucket'; b.id = 'bucket-' + i; bucketGrid.appendChild(b); }
 
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
-    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color;
+    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color; uniform float u_ghst;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
         if(u_active == 0) { gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); return; }
-        float wiggle = sin(uv.y * 25.0 + u_time * 10.0) * 0.1;
+        float wiggle = sin(uv.y * (25.0 + u_ghst * 20.0) + u_time * 10.0) * (0.08 + u_ghst * 0.05);
         float line = smoothstep(0.08, 0.0, abs(uv.x - 0.5 + wiggle));
         vec3 col = u_fae == 1 ? (1.0 - u_color) : u_color;
         gl_FragColor = vec4(col * line, 1.0);
@@ -117,22 +116,17 @@
     gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs));
     gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs));
     gl.linkProgram(program); gl.useProgram(program);
+    const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_fae"), active: gl.getUniformLocation(program, "u_active"), color: gl.getUniformLocation(program, "u_color"), ghst: gl.getUniformLocation(program, "u_ghst") };
     const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
     const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-    const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_fae"), active: gl.getUniformLocation(program, "u_active"), color: gl.getUniformLocation(program, "u_color") };
 
-    let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc, ghostGain;
+    let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc;
     let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, sat: false, gran: false, wah: false, bit: false, ebow: false, whir: false, rots: false, frac: false, ghst: false, theremin: false };
-    
-    // v2.34 TRACKER DATA STRUCTURE: 4 Banks of 64
-    let seq = { 
-        rec: false, play: false, step: 0, 
-        currentBank: 0, allPlay: false,
-        banks: [new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null)] 
-    };
-
+    let seq = { rec: false, play: false, step: 0, currentBank: 0, allPlay: false, banks: [new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null)] };
+    let ghostMemory = []; // Spectral Memory Buffer
     let currentChip = 'DEFAULT', globalOctMultiplier = 1.0, currentRgb = [0, 1, 0.5], springVal = 0, ghostForce = 0.5;
+
     const chipModes = { 'Z80': 'square', 'PAULA': 'sawtooth', 'SID': 'triangle', 'OPL3': 'sine', 'SPC': 'sawtooth', 'NES': 'square' };
 
     function setupEngine() {
@@ -142,45 +136,33 @@
         filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.connect(masterGain);
         satNode = audioCtx.createWaveShaper(); let c = new Float32Array(44100); for(let i=0; i<44100; i++){ let x = i*2/44100-1; c[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); } satNode.curve = c; satNode.connect(filterNode);
         delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3; let fb = audioCtx.createGain(); fb.gain.value = 0.4; delayNode.connect(fb); fb.connect(delayNode); delayNode.connect(satNode);
-        ghostGain = audioCtx.createGain(); ghostGain.gain.value = 0; let bS = 2 * audioCtx.sampleRate, nB = audioCtx.createBuffer(1, bS, audioCtx.sampleRate), out = nB.getChannelData(0); for(let i=0; i<bS; i++) out[i]=Math.random()*2-1;
-        let whiteNoise = audioCtx.createBufferSource(); whiteNoise.buffer=nB; whiteNoise.loop=true; whiteNoise.connect(ghostGain); ghostGain.connect(filterNode); whiteNoise.start();
         ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain(); ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
         document.getElementById('overlay').style.display = 'none';
-    }
-
-    function setBank(index) {
-        seq.currentBank = index;
-        document.querySelectorAll('.btn.bank').forEach(b => b.classList.remove('active'));
-        document.getElementById('bank' + index).classList.add('active');
-        refreshBucketColors();
-    }
-
-    function toggleAllPlay() {
-        seq.allPlay = !seq.allPlay;
-        document.getElementById('btnAllPlay').classList.toggle('active', seq.allPlay);
-    }
-
-    function syncRouting(v) {
-        if (!v || !v.gain) return; v.gain.disconnect();
-        let target = mods.gran ? delayNode : (mods.sat ? satNode : filterNode);
-        if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(target); } else { v.gain.connect(target); }
     }
 
     function createVoice(id) {
         let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
         v.osc.connect(v.gain); v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-        syncRouting(v); v.osc.start(); voices[id] = v; return v;
+        v.gain.connect(mods.gran ? delayNode : (mods.sat ? satNode : filterNode));
+        v.osc.start(); voices[id] = v; return v;
     }
 
     function setFreq(v, angle) {
         let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760)) * globalOctMultiplier;
         if (mods.spring) base += springVal;
-        if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
+        
+        // GHOST SPECTRAL LINKING
+        if (mods.ghst && ghostMemory.length > 0) {
+            let ghostSum = ghostMemory.reduce((a, b) => a + b, 0) / ghostMemory.length;
+            base = (base * 0.7) + (ghostSum * 0.3); // Link current note to memory
+        }
+
+        v.osc.type = currentChip !== 'DEFAULT' ? chipModes[currentChip] : (mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth'));
         v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.3 : 0.05);
         v.lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.1);
         v.lastAngle = angle;
-        let hue = (angle/360)*285; if(mods.fae) hue = 285-hue;
-        let rgb = hslToRgb(hue/360, 1, 0.5); if(v !== voices['seq']) currentRgb = rgb;
+        let hue=(angle/360)*285; if(mods.fae) hue=285-hue;
+        let rgb=hslToRgb(hue/360, 1, 0.5); if(v !== voices['seq']) currentRgb = rgb;
         return `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
     }
 
@@ -190,32 +172,21 @@
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0, ang = (t.clientX / window.innerWidth) * 360;
             if(!voices[id]) voices[id] = createVoice(id);
-            let c = setFreq(voices[id], ang); syncRouting(voices[id]); 
-            voices[id].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
-            if(seq.rec) {
-                seq.banks[seq.currentBank][seq.step] = { a: ang, c: c };
-                let b = document.getElementById('bucket-' + seq.step);
-                if(b) { b.classList.add('filled'); b.style.backgroundColor = c; }
-            }
+            let c = setFreq(voices[id], ang); voices[id].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
+            if(mods.ghst) { ghostMemory.push(ang); if(ghostMemory.length > 4) ghostMemory.shift(); }
+            if(seq.rec) { seq.banks[seq.currentBank][seq.step] = { a: ang, c: c }; let b = document.getElementById('bucket-' + seq.step); if(b) { b.classList.add('filled'); b.style.backgroundColor = c; } }
         }
     }
 
-    function stopAll() { seq.play = seq.rec = false; seq.step = 0; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); for(let id in voices) { if(voices[id]) voices[id].gain.gain.value = 0; } if(voices['seq']){ voices['seq'].osc.stop(); delete voices['seq']; } }
-    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); document.getElementById('btnFae').classList.toggle('active', mods.fae); refreshBucketColors(); }
-    
-    function refreshBucketColors() {
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('filled'); b.style.backgroundColor = ''; });
-        seq.banks[seq.currentBank].forEach((d, i) => {
-            let b = document.getElementById('bucket-' + i);
-            if (b && d) {
-                let hue=(d.a/360)*285; if(mods.fae) hue=285-hue;
-                let rgb=hslToRgb(hue/360,1,0.5); let colStr=`rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
-                b.classList.add('filled'); b.style.backgroundColor = mods.fae ? colStr.replace('rgb', 'rgba').replace(')', ', 0.9)') : colStr;
-            }
-        });
-    }
-
+    function setBank(index) { seq.currentBank = index; document.querySelectorAll('.btn.bank').forEach(b => b.classList.remove('active')); document.getElementById('bank' + index).classList.add('active'); refreshBucketColors(); }
+    function toggleAllPlay() { seq.allPlay = !seq.allPlay; document.getElementById('btnAllPlay').classList.toggle('active', seq.allPlay); }
     function toggleMod(m) { setupEngine(); mods[m]=!mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); }
+    function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); }
+    function adjustSpring(a) { springVal += a; for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
+    function stopAll() { seq.play = seq.rec = false; seq.step = 0; ghostMemory = []; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); for(let id in voices) { if(voices[id]) voices[id].gain.gain.value = 0; } if(voices['seq']){ voices['seq'].osc.stop(); delete voices['seq']; } }
+    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); document.getElementById('btnFae').classList.toggle('active', mods.fae); refreshBucketColors(); }
+    function refreshBucketColors() { document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('filled'); b.style.backgroundColor = ''; }); seq.banks[seq.currentBank].forEach((d, i) => { let b = document.getElementById('bucket-' + i); if (b && d) { let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360,1,0.5); let colStr=`rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`; b.classList.add('filled'); b.style.backgroundColor = mods.fae ? colStr.replace('rgb', 'rgba').replace(')', ', 0.9)') : colStr; } }); }
+    function setChip(m) { setupEngine(); currentChip = m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); const btn = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()); if(btn) btn.classList.add('active'); for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[m]; }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
 
@@ -227,23 +198,18 @@
         if (!audioCtx) return;
         document.querySelectorAll('.bucket').forEach(b => b.classList.remove('playhead'));
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
-        
         if(seq.play) {
             let d = seq.banks[seq.currentBank][seq.step];
             if(d) {
                 if(!voices['seq']) voices['seq'] = createVoice('seq');
-                setFreq(voices['seq'], d.a); syncRouting(voices['seq']); voices['seq'].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.02);
+                setFreq(voices['seq'], d.a); voices['seq'].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.02);
                 let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; currentRgb=hslToRgb(hue/360,1,0.5);
             } else if(voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
         }
-
         seq.step++;
         if(seq.step >= 64) {
             seq.step = 0;
-            if(seq.allPlay && seq.play) {
-                seq.currentBank = (seq.currentBank + 1) % 4;
-                setBank(seq.currentBank); // Auto-jump to next bank visual
-            }
+            if(seq.allPlay && seq.play) { seq.currentBank = (seq.currentBank + 1) % 4; setBank(seq.currentBank); }
         }
     }, 125);
 
@@ -254,10 +220,9 @@
         let isTouching = false; for(let id in voices) if(id !== 'seq' && voices[id].gain.gain.value > 0.01) isTouching = true;
         gl.uniform1i(uLocs.active, (seq.play || isTouching)?1:0);
         gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
+        gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
-    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.34", patterns: seq.banks }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_track_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
-    function setChip(m) { setupEngine(); currentChip = m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); const btn = document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()); if(btn) btn.classList.add('active'); for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[m]; }
     requestAnimationFrame(render);
 </script>
 </body>
