@@ -2,21 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.26 - FAE Color Fix</title>
+    <title>CRi2 / MARIAH v2.27 - Gatekeeper Fix</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
-        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; position: absolute; top:0; left:0; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        
+        /* UNBLOCKABLE OVERLAY */
+        #overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,1); display: flex; justify-content: center; 
+            align-items: center; font-size: 28px; color: #0f0; 
+            z-index: 2000000; cursor: pointer; text-align: center; pointer-events: auto;
+        }
+
         #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 320px; pointer-events: auto; }
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
+        
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
         .fae-active .bucket { border-color: rgba(0,0,0,0.2); background: #eee; }
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
         .fae-active .bucket.playhead { border: 2px solid #000; box-shadow: 0 0 5px #000; }
+        
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 20px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 8px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; }
@@ -30,11 +41,13 @@
         .btn.step { min-width: 45px; padding: 20px 5px; }
         .slider-box { background: #111; padding: 8px 12px; border: 2px solid #0ff; border-radius: 10px; display: flex; align-items: center; width: 220px; }
         input[type=range] { flex-grow: 1; accent-color: #0ff; height: 30px; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 100000; cursor: pointer; text-align: center; }
     </style>
 </head>
-<body>
-    <div id="overlay" onclick="setupEngine()">v2.26 FAE COLOR FIX<br>START CIRCUIT</div>
+<body oncontextmenu="return false;">
+    <div id="overlay" ontouchstart="setupEngine()" onclick="setupEngine()">v2.27 CIRCUIT START<br>TAP TO INITIALIZE</div>
+    
+    <canvas id="vortexCanvas"></canvas>
+
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -84,7 +97,6 @@
             </div>
         </div>
     </div>
-    <canvas id="vortexCanvas"></canvas>
 
 <script>
     const canvas = document.getElementById('vortexCanvas');
@@ -177,18 +189,12 @@
         for(let id in voices) if(voices[id]){ syncRouting(voices[id]); voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); setFreq(voices[id], voices[id].lastAngle); }
     }
 
-    function toggleFae() { 
-        setupEngine(); mods.fae = !mods.fae; 
-        document.getElementById('btnFae').classList.toggle('active', mods.fae); 
-        document.body.classList.toggle('fae-active', mods.fae);
-        refreshBucketColors(); // SURGICAL: Invert colors immediately
-    }
-
+    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); refreshBucketColors(); }
+    
     function refreshBucketColors() {
         seq.data.forEach((d, i) => {
             let b = document.getElementById('bucket-' + i);
             if (b && d) {
-                // Invert recorded color visual based on new mode
                 let hue = (d.a / 360) * 285; if (mods.fae) hue = 285 - hue;
                 let rgb = hslToRgb(hue / 360, 1, 0.5);
                 let colStr = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
@@ -197,10 +203,69 @@
         });
     }
 
+    function setChip(mode) {
+        setupEngine(); currentChip = mode; document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase()); if(btn) btn.classList.add('active');
+        for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type;
+    }
+
     function stopAll() { seq.play = seq.rec = false; seq.step = 0; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); for(let id in voices) { if(voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } if(voices['seq']) { voices['seq'].osc.stop(); delete voices['seq']; } }
 
     function handleInput(e) {
         setupEngine(); if (e.target.tagName === 'BUTTON') return;
         liveActive = true; let touches = e.touches || [e]; let bG = balanceVoices();
         for(let i=0; i<touches.length; i++) {
-            let t = touches[i],
+            let t = touches[i], id = t.identifier || 0, ang = (t.clientX / window.innerWidth) * 360;
+            if(!voices[id]) voices[id] = createVoice();
+            let c = setFreq(voices[id], ang); syncRouting(voices[id]); voices[id].gain.gain.setTargetAtTime(bG, audioCtx.currentTime, 0.05);
+            if(seq.rec) {
+                seq.data[seq.step] = { a: ang, c: c };
+                let b = document.getElementById('bucket-' + seq.step);
+                if(b) { b.classList.add('filled'); b.style.backgroundColor = mods.fae ? c.replace('rgb', 'rgba').replace(')', ', 0.9)') : c; }
+            }
+        }
+    }
+
+    function balanceVoices() { let c = 0; for(let id in voices) if(voices[id] && voices[id].gain.gain.value > 0) c++; return c > 1 ? (1.0 / Math.sqrt(c)) : 1.0; }
+    function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
+    function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
+    function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); if(mods.ghst) ghostGain.gain.setTargetAtTime(ghostForce, audioCtx.currentTime, 0.1); }
+    function adjustSpring(a) { springVal = Math.max(-400, Math.min(400, springVal+a)); for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
+
+    canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
+    canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
+    canvas.addEventListener('touchend', stopInput);
+
+    setInterval(() => {
+        if (!audioCtx) return;
+        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor = mods.fae ? '#eee' : '#080808'; });
+        let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
+        seqActive = (seq.play && seq.data[seq.step]) ? true : false;
+        if(seq.play) {
+            let d = seq.data[seq.step];
+            if(d) {
+                if(!voices['seq']) voices['seq'] = createVoice();
+                setFreq(voices['seq'], d.a); syncRouting(voices['seq']); voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
+                let hue = (d.a/360)*285; if(mods.fae) hue = 285-hue; currentRgb = hslToRgb(hue/360, 1, 0.5);
+                if(ab) ab.classList.add('active');
+            } else if(voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
+        }
+        seq.step = (seq.step + 1) % 64;
+    }, 125); 
+
+    function render(t) {
+        gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
+        gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
+        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.wind, mods.wind?1:0);
+        gl.uniform1i(uLocs.ring, mods.ring?1:0); gl.uniform1f(uLocs.spring, springVal);
+        gl.uniform1i(uLocs.sat, mods.sat?1:0); gl.uniform1i(uLocs.bit, mods.bit?1:0);
+        gl.uniform1f(uLocs.wah, mods.wah?1.0:0.0); gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
+        gl.uniform1i(uLocs.active, (liveActive || seqActive)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
+    }
+    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.27", sequence: seq.data }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_mod_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
+    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
+    requestAnimationFrame(render);
+</script>
+</body>
+</html>
