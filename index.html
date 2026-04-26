@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.25 - Master Restoration</title>
+    <title>CRi2 / MARIAH v2.26 - FAE Color Fix</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.25 MASTER RESTORE<br>START CIRCUIT</div>
+    <div id="overlay" onclick="setupEngine()">v2.26 FAE COLOR FIX<br>START CIRCUIT</div>
     <div id="ui-layer">
         <div id="chip-row">
             <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80')">Z80</button>
@@ -134,7 +134,6 @@
         if (audioCtx) return;
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         masterGain = audioCtx.createGain(); masterGain.gain.value = document.getElementById('volSlider').value; masterGain.connect(audioCtx.destination);
-        
         filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.connect(masterGain);
         satNode = audioCtx.createWaveShaper(); let curve = new Float32Array(44100); for (let i=0; i<44100; i++) { let x = i*2/44100-1; curve[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); }
         satNode.curve = curve; satNode.connect(filterNode);
@@ -144,15 +143,6 @@
         ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain(); ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('volSlider').addEventListener('input', function() { if(masterGain) masterGain.gain.setTargetAtTime(this.value, audioCtx.currentTime, 0.02); });
-    }
-
-    function createVoice() {
-        let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
-        v.lfo.frequency.value = 10; v.lfoG.gain.value = mods.wind ? 15 : 0; v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-        v.gain.gain.value = 0; v.osc.connect(v.gain); 
-        syncRouting(v);
-        if(currentChip !== 'DEFAULT') v.osc.type = chipModes[currentChip].type;
-        v.osc.start(); return v;
     }
 
     function syncRouting(v) {
@@ -187,67 +177,30 @@
         for(let id in voices) if(voices[id]){ syncRouting(voices[id]); voices[id].lfoG.gain.setTargetAtTime(mods.wind?15:0, audioCtx.currentTime, 0.1); setFreq(voices[id], voices[id].lastAngle); }
     }
 
-    function setChip(mode) {
-        setupEngine(); currentChip = mode; document.querySelectorAll('.btn.chip').forEach(b => b.classList.remove('active'));
-        const btn = document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase()); if(btn) btn.classList.add('active');
-        for(let id in voices) if(voices[id] && voices[id].osc) voices[id].osc.type = chipModes[mode].type;
+    function toggleFae() { 
+        setupEngine(); mods.fae = !mods.fae; 
+        document.getElementById('btnFae').classList.toggle('active', mods.fae); 
+        document.body.classList.toggle('fae-active', mods.fae);
+        refreshBucketColors(); // SURGICAL: Invert colors immediately
+    }
+
+    function refreshBucketColors() {
+        seq.data.forEach((d, i) => {
+            let b = document.getElementById('bucket-' + i);
+            if (b && d) {
+                // Invert recorded color visual based on new mode
+                let hue = (d.a / 360) * 285; if (mods.fae) hue = 285 - hue;
+                let rgb = hslToRgb(hue / 360, 1, 0.5);
+                let colStr = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
+                b.style.backgroundColor = mods.fae ? colStr.replace('rgb', 'rgba').replace(')', ', 0.9)') : colStr;
+            }
+        });
     }
 
     function stopAll() { seq.play = seq.rec = false; seq.step = 0; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); for(let id in voices) { if(voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } if(voices['seq']) { voices['seq'].osc.stop(); delete voices['seq']; } }
 
     function handleInput(e) {
-        setupEngine(); if (e.target.tagName === 'BUTTON' || e.target.type === 'range') return;
+        setupEngine(); if (e.target.tagName === 'BUTTON') return;
         liveActive = true; let touches = e.touches || [e]; let bG = balanceVoices();
         for(let i=0; i<touches.length; i++) {
-            let t = touches[i], id = t.identifier || 0, ang = (t.clientX / window.innerWidth) * 360;
-            if(!voices[id]) voices[id] = createVoice();
-            let c = setFreq(voices[id], ang); syncRouting(voices[id]); voices[id].gain.gain.setTargetAtTime(bG, audioCtx.currentTime, 0.05);
-            if(seq.rec) seq.data[seq.step] = { a: ang, c: c };
-        }
-    }
-
-    function balanceVoices() { let c = 0; for(let id in voices) if(voices[id] && voices[id].gain.gain.value > 0) c++; return c > 1 ? (1.0 / Math.sqrt(c)) : 1.0; }
-    function stopInput() { if(!mods.stick) { for(let id in voices) if(id !== 'seq' && voices[id]) voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); liveActive = false; } }
-    function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
-    function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); if(mods.ghst) ghostGain.gain.setTargetAtTime(ghostForce, audioCtx.currentTime, 0.1); }
-    function adjustSpring(a) { springVal = Math.max(-400, Math.min(400, springVal+a)); for(let id in voices) if(voices[id]) setFreq(voices[id], voices[id].lastAngle); }
-
-    canvas.addEventListener('touchstart', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchmove', (e) => { if (e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', stopInput);
-
-    setInterval(() => {
-        if (!audioCtx) return;
-        document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('active', 'playhead'); if(!b.classList.contains('filled')) b.style.backgroundColor = mods.fae ? '#eee' : '#080808'; });
-        let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
-        seqActive = (seq.play && seq.data[seq.step]) ? true : false;
-        if(seq.play) {
-            let d = seq.data[seq.step];
-            if(d) {
-                if(!voices['seq']) voices['seq'] = createVoice();
-                setFreq(voices['seq'], d.a); syncRouting(voices['seq']); voices['seq'].gain.gain.setTargetAtTime(balanceVoices(), audioCtx.currentTime, 0.02);
-                let hue = (d.a/360)*285; if(mods.fae) hue = 285-hue; currentRgb = hslToRgb(hue/360, 1, 0.5);
-                if(ab) ab.classList.add('active');
-            } else if(voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
-        }
-        if(seq.data[seq.step]) { let d = seq.data[seq.step]; if(ab) { ab.classList.add('filled'); ab.style.backgroundColor = mods.fae ? d.c.replace('rgb', 'rgba').replace(')', ', 0.9)') : d.c; } }
-        seq.step = (seq.step + 1) % 64;
-    }, 125); 
-
-    function render(t) {
-        gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
-        gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.wind, mods.wind?1:0);
-        gl.uniform1i(uLocs.ring, mods.ring?1:0); gl.uniform1f(uLocs.spring, springVal);
-        gl.uniform1i(uLocs.sat, mods.sat?1:0); gl.uniform1i(uLocs.bit, mods.bit?1:0);
-        gl.uniform1f(uLocs.wah, mods.wah?1.0:0.0); gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
-        gl.uniform1i(uLocs.active, (liveActive || seqActive)?1:0); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
-        gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
-    }
-    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.25", sequence: seq.data }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_mod_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
-    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
-    function toggleFae() { setupEngine(); mods.fae = !mods.fae; document.getElementById('btnFae').classList.toggle('active', mods.fae); document.body.classList.toggle('fae-active', mods.fae); }
-    requestAnimationFrame(render);
-</script>
-</body>
-</html>
+            let t = touches[i],
