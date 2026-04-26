@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.29 - Chassis Restoration</title>
+    <title>CRi2 / MARIAH v2.30 - Visual Restoration</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; position: fixed; top: 0; left: 0; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* v2.29 MASTER LAYOUT */
-        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 320px; pointer-events: auto; }
+        /* v2.30 ALIGNMENT: Raised up to 220px to fix the 'too low' gap */
+        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 220px; pointer-events: auto; }
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 12px 6px; font-size: 13px; min-width: 62px; border-radius: 6px; cursor: pointer; }
-        .btn.chip.active { background: #0cf !important; color: #000 !important; }
+        .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
 
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
         .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; position: relative; }
@@ -41,7 +41,7 @@
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.29 CHASSIS RESTORE<br>TAP TO START</div>
+    <div id="overlay" onclick="setupEngine()">v2.30 VISUAL RESTORE<br>TAP TO INITIALIZE</div>
     <canvas id="vortexCanvas"></canvas>
     <div id="ui-layer">
         <div id="chip-row">
@@ -103,14 +103,21 @@
         bucketGrid.appendChild(b); 
     }
 
+    /* v2.30 VISUAL ENGINE RESTORED */
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
     const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color;
     void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
-        if(u_active == 0) { gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); return; }
-        float line = smoothstep(0.02, 0.0, abs(uv.x - 0.5 + sin(uv.y * 20.0 + u_time * 5.0) * 0.1));
+        if(u_active == 0) { 
+            gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); 
+            return; 
+        }
+        // The Vortex Wiggle Logic
+        float wiggle = sin(uv.y * 30.0 + u_time * 8.0) * 0.08;
+        float line = smoothstep(0.06, 0.0, abs(uv.x - 0.5 + wiggle));
         vec3 col = u_fae == 1 ? (1.0 - u_color) : u_color;
         gl_FragColor = vec4(col * line, 1.0);
+        if(u_fae == 1) gl_FragColor = vec4(1.0 - (1.0 - col) * line, 1.0);
     }`;
 
     function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
@@ -126,7 +133,7 @@
     let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc;
     let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, sat: false, gran: false, wah: false, bit: false, ebow: false, whir: false, rots: false, frac: false, ghst: false };
     let seq = { rec: false, play: false, step: 0, data: new Array(64).fill(null) };
-    let currentChip = 'DEFAULT', globalOctMultiplier = 1.0, currentRgb = [0,1,0.5], springVal = 0, ghostForce = 0.5;
+    let currentChip = 'DEFAULT', globalOctMultiplier = 1.0, currentRgb = [0, 1, 0.5], springVal = 0, ghostForce = 0.5;
 
     const chipModes = { 'Z80': 'square', 'PAULA': 'sawtooth', 'SID': 'triangle', 'OPL3': 'sine', 'SPC': 'sawtooth', 'NES': 'square' };
 
@@ -146,8 +153,16 @@
         let v = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), lastAngle: 180 };
         v.osc.connect(v.gain);
         v.lfo.connect(v.lfoG); v.lfoG.connect(v.osc.frequency); v.lfo.start();
-        v.gain.connect(mods.gran ? delayNode : (mods.sat ? satNode : filterNode));
+        syncRouting(v);
         v.osc.start(); voices[id] = v; return v;
+    }
+
+    function syncRouting(v) {
+        if (!v || !v.gain) return;
+        v.gain.disconnect();
+        let target = mods.gran ? delayNode : (mods.sat ? satNode : filterNode);
+        if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(target); }
+        else { v.gain.connect(target); }
     }
 
     function setFreq(v, angle) {
@@ -171,7 +186,8 @@
         for(let i=0; i<touches.length; i++) {
             let t = touches[i], id = t.identifier || 0, ang = (t.clientX / window.innerWidth) * 360;
             if(!voices[id]) voices[id] = createVoice(id);
-            let c = setFreq(voices[id], ang); voices[id].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
+            let c = setFreq(voices[id], ang); syncRouting(voices[id]); 
+            voices[id].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
             if(seq.rec) {
                 seq.data[seq.step] = { a: ang, c: c };
                 let b = document.getElementById('bucket-' + seq.step);
@@ -180,21 +196,20 @@
         }
     }
 
-    function stopInput() { for(let id in voices) if(id !== 'seq') { voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); } }
-    function toggleMod(m) { mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?800:20000, audioCtx.currentTime, 0.1); }
-    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); document.getElementById('btnFae').classList.toggle('active', mods.fae); seq.data.forEach((d,i)=>{ let b = document.getElementById('bucket-'+i); if(b && d){ let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360,1,0.5); b.style.backgroundColor=`rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`; }}); }
+    function toggleMod(m) { setupEngine(); mods[m] = !mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?800:20000, audioCtx.currentTime, 0.1); }
+    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); document.getElementById('btnFae').classList.toggle('active', mods.fae); refreshBucketColors(); }
+    function refreshBucketColors() { seq.data.forEach((d,i)=>{ let b = document.getElementById('bucket-'+i); if(b && d){ let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360,1,0.5); b.style.backgroundColor=`rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`; }}); }
     function setChip(m) { setupEngine(); currentChip = m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()).classList.add('active'); }
-    function shiftOct(m) { setupEngine(); globalOctMultiplier *= m; }
+    function stopAll() { seq.play = seq.rec = false; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); for(let id in voices) { if(voices[id]) voices[id].gain.gain.value = 0; } if(voices['seq']){ voices['seq'].osc.stop(); delete voices['seq']; } }
+    function shiftOct(m) { globalOctMultiplier *= m; }
     function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); }
     function adjustSpring(a) { springVal = Math.max(-400, Math.min(400, springVal+a)); }
-    function stopAll() { seq.play = seq.rec = false; document.getElementById('btnPlay').classList.remove('active'); document.getElementById('btnRec').classList.remove('active'); if(voices['seq']){ voices['seq'].gain.gain.value = 0; } }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
-    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.29", sequence: seq.data }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_mod_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
 
     canvas.addEventListener('touchstart', (e) => { if(e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { if(e.target.tagName !== 'BUTTON') e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', stopInput);
+    canvas.addEventListener('touchend', () => { for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); });
 
     setInterval(() => {
         if (!audioCtx) return;
@@ -204,7 +219,7 @@
             let d = seq.data[seq.step];
             if(d) {
                 if(!voices['seq']) voices['seq'] = createVoice('seq');
-                setFreq(voices['seq'], d.a); voices['seq'].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.02);
+                setFreq(voices['seq'], d.a); syncRouting(voices['seq']); voices['seq'].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.02);
                 let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; currentRgb=hslToRgb(hue/360,1,0.5);
             } else if(voices['seq']) { voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05); }
         }
@@ -214,10 +229,12 @@
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
         gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.active, (seq.play || voices[0] || voices[1])?1:0);
+        gl.uniform1i(uLocs.fae, mods.fae?1:0); 
+        gl.uniform1i(uLocs.active, (seq.play || voices[0] || voices[1] || voices['seq'])?1:0);
         gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
+    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.30", sequence: seq.data }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_mod_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
     requestAnimationFrame(render);
 </script>
 </body>
