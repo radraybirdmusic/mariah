@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.39</title>
+    <title>CRi2 / MARIAH v2.40</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: monospace; color: #0f0; }
         body.fae-active { background: #fff !important; color: #000 !important; }
@@ -15,9 +15,8 @@
         .btn.bank.active { background: #fff !important; color: #000 !important; }
         .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
         #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
-        .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; }
-        .fae-active .bucket { border-color: #ccc; background: #eee; }
-        .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
+        .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; }
+        .bucket.filled { border-width: 2px; }
         .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; }
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: 5px; pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; }
@@ -26,14 +25,12 @@
         .btn.fx { border-color: #ff0; color: #ff0; }
         .btn.fx.active { background: #ff0 !important; color: #000 !important; }
         .btn.kin { border-color: #f0f; color: #f0f; }
-        .btn.kin.active { background: #f0f !important; color: #000 !important; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 18px; padding: 12px; min-width: auto; }
-        .btn.step { min-width: 40px; padding: 16px 4px; }
+        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 18px; padding: 12px; }
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 1000000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.39 STABILITY MASTER<br>TAP TO START</div>
+    <div id="overlay" onclick="setupEngine()">v2.40 VISUAL RESTORE<br>TAP TO START</div>
     <canvas id="vortexCanvas"></canvas>
     <div id="ui-layer">
         <div id="chip-row">
@@ -53,7 +50,7 @@
         </div>
         <div id="bucket-grid"></div>
         <div id="controls">
-            <button class="btn kill" onclick="window.location.reload()">!! NUCLEAR RESET !!</button>
+            <button class="btn kill" onclick="window.location.reload()">RESET</button>
             <div class="row">
                 <button id="btnWhir" class="btn kin" onclick="toggleMod('whir')">WHIR</button>
                 <button id="btnRots" class="btn kin" onclick="toggleMod('rots')">ROTS</button>
@@ -92,9 +89,10 @@
     const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
     const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color; uniform float u_ghst;
     void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution; if(u_active == 0) { gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); return; }
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        if(u_active == 0) { gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); return; }
         float wiggle = sin(uv.y * (25.0 + u_ghst * 20.0) + u_time * 10.0) * (0.08 + u_ghst * 0.05);
-        float line = smoothstep(0.08, 0.0, abs(uv.x - 0.5 + wiggle));
+        float line = smoothstep(0.1, 0.0, abs(uv.x - 0.5 + wiggle));
         vec3 col = u_fae == 1 ? (1.0 - u_color) : u_color;
         gl_FragColor = vec4(col * line, 1.0);
         if(u_fae == 1) gl_FragColor = vec4(1.0 - (1.0 - col) * line, 1.0);
@@ -108,8 +106,7 @@
     let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc;
     let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, sat: false, gran: false, wah: false, bit: false, ebow: false, whir: false, rots: false, frac: false, ghst: false, theremin: false };
     let seq = { rec: false, play: false, step: 0, currentBank: 0, allPlay: false, banks: Array.from({length:4}, () => new Array(64).fill(null)) };
-    let ghostMemory = [], springVal = 0, ghostForce = 0.5, currentRgb = [0, 1, 0.5];
-    const chipModes = { 'Z80': 'square', 'PAULA': 'sawtooth', 'SID': 'triangle', 'OPL3': 'sine', 'SPC': 'sawtooth', 'NES': 'square' }, currentChip = 'DEFAULT';
+    let ghostMemory = [], springVal = 0, ghostForce = 0.5, currentRgb = [0, 1, 0.5], liveTouching = false;
 
     function setupEngine() {
         if (audioCtx) return; audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -124,35 +121,32 @@
     function setFreq(v, angle) {
         let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760));
         if (mods.spring) base += springVal;
-        if (mods.ghst && ghostMemory.length > 0) base = (base * 0.7) + ((ghostMemory.reduce((a, b) => a + b, 0) / ghostMemory.length) * 0.3);
         if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
         v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
         v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.3 : 0.05);
-        v.lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.1); v.lastAngle = angle;
-        let hue=(angle/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360, 1, 0.5); if(v !== voices['seq']) currentRgb = rgb;
-        return `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
+        v.lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.1);
+        let hue=(angle/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360, 1, 0.5); currentRgb = rgb; return `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
     }
     function handleInput(e) {
         setupEngine(); if(e.target.tagName === 'BUTTON') return;
-        let t = e.touches ? e.touches[0] : e, id = t.identifier || 0, ang = (t.clientX / window.innerWidth) * 360;
+        liveTouching = true; let t = e.touches ? e.touches[0] : e, id = 0, ang = (t.clientX / window.innerWidth) * 360;
         if(!voices[id]) { voices[id] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain() }; voices[id].osc.connect(voices[id].gain); voices[id].lfo.connect(voices[id].lfoG); voices[id].lfoG.connect(voices[id].osc.frequency); voices[id].lfo.start(); voices[id].osc.start(); }
         let c = setFreq(voices[id], ang); syncRouting(voices[id]); voices[id].gain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
-        if(mods.ghst) { ghostMemory.push(ang); if(ghostMemory.length > 4) ghostMemory.shift(); }
         if(seq.rec) { seq.banks[seq.currentBank][seq.step] = { a: ang, c: c }; let b = document.getElementById('bucket-' + seq.step); if(b) { b.classList.add('filled'); b.style.backgroundColor = c; } }
     }
+    function toggleMod(m) { setupEngine(); mods[m]=!mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); }
     function setBank(i) { seq.currentBank = i; document.querySelectorAll('.btn.bank').forEach(b => b.classList.remove('active')); document.getElementById('bank' + i).classList.add('active'); refreshBuckets(); }
-    function toggleMod(m) { setupEngine(); mods[m]=!mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?800:20000, audioCtx.currentTime, 0.1); }
-    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); refreshBuckets(); }
     function refreshBuckets() { document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('filled'); b.style.backgroundColor = ''; }); seq.banks[seq.currentBank].forEach((d, i) => { if (d) { let b = document.getElementById('bucket-' + i); b.classList.add('filled'); b.style.backgroundColor = d.c; } }); }
     function stopAll() { seq.play = seq.rec = false; seq.step = 0; if(voices['seq']){ voices['seq'].gain.gain.value = 0; } }
     function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
     function toggleAllPlay() { seq.allPlay = !seq.allPlay; document.getElementById('btnAllPlay').classList.toggle('active', seq.allPlay); }
+    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); refreshBuckets(); }
     function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); }
     function adjustSpring(a) { springVal += a; }
     function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', () => { for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); });
+    canvas.addEventListener('touchend', () => { liveTouching = false; for(let id in voices) if(id !== 'seq') voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); });
     setInterval(() => {
         if (!audioCtx) return; document.querySelectorAll('.bucket').forEach(b => b.classList.remove('playhead'));
         let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
@@ -166,7 +160,7 @@
     function render(t) {
         gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
         gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.active, (seq.play || voices[0] || voices['seq'])?1:0);
+        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.active, (seq.play || liveTouching)?1:0);
         gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
