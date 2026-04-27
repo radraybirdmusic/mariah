@@ -1,184 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.41</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: monospace; color: #0f0; }
-        body.fae-active { background: #fff !important; color: #000 !important; }
-        canvas { width: 100vw; height: 100vh; display: block; touch-action: none; position: fixed; top: 0; left: 0; z-index: 1; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 120px; pointer-events: auto; }
-        #bank-row { display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 8px; pointer-events: auto; }
-        .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 10px 4px; font-size: 12px; min-width: 55px; border-radius: 6px; }
-        .btn.bank { background: #000; border: 2px solid #fff; color: #fff; padding: 8px 15px; border-radius: 4px; }
-        .btn.bank.active { background: #fff !important; color: #000 !important; }
-        .btn.chip.active { background: #0cf !important; color: #000 !important; box-shadow: 0 0 10px #0cf; }
-        #bucket-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 98%; max-width: 800px; margin: 10px auto 0 auto; pointer-events: auto; }
-        .bucket { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 50%; background: #080808; transition: transform 0.1s; }
-        .bucket.filled { border-width: 2px; }
-        .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; }
-        #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: 5px; pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
-        .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; }
-        .btn { background: #000; border: 2px solid #0f0; color: #0f0; padding: 16px 10px; text-transform: uppercase; font-weight: 900; font-size: 15px; border-radius: 10px; min-width: 85px; touch-action: none; }
-        .btn.active { background: #0f0 !important; color: #000 !important; }
-        .btn.fx { border-color: #ff0; color: #ff0; }
-        .btn.fx.active { background: #ff0 !important; color: #000 !important; }
-        .btn.kin { border-color: #f0f; color: #f0f; }
-        .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 18px; padding: 12px; }
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 1000000; cursor: pointer; text-align: center; }
-    </style>
+<meta charset="UTF-8"><title>MARIAH v2.42</title>
+<style>
+body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0}
+body.fae-active{background:#fff!important;color:#000!important}
+canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
+#chip-row{display:flex;gap:4px;justify-content:center;margin-top:120px;pointer-events:auto}
+#bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
+.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px}
+.btn.chip.active{background:#0cf!important;color:#000!important}
+.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:6px 12px;border-radius:4px}
+.btn.bank.active{background:#fff!important;color:#000!important}
+#bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
+.bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808}
+.bucket.playhead{border:2px solid #fff;box-shadow:0 0 5px #fff}
+#controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:5px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:4px;align-items:center;z-index:9999;background:rgba(0,0,0,0.8)}
+.row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 8px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:80px;touch-action:none}
+.btn.active{background:#0f0!important;color:#000!important}
+.btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
+.btn.kin{border-color:#f0f;color:#f0f}.btn.kin.active{background:#f0f!important;color:#000!important}
+.btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center}
+</style>
 </head>
-<body>
-    <div id="overlay" onclick="setupEngine()">v2.41 POLYPHONIC RESTORE<br>TAP TO INITIALIZE</div>
-    <canvas id="vortexCanvas"></canvas>
-    <div id="ui-layer">
-        <div id="chip-row">
-            <button id="btnZ80" class="btn chip" onclick="setChip('Z80')">Z80</button>
-            <button id="btnPaula" class="btn chip" onclick="setChip('PAULA')">PAULA</button>
-            <button id="btnSid" class="btn chip" onclick="setChip('SID')">SID</button>
-            <button id="btnOpl3" class="btn chip" onclick="setChip('OPL3')">OPL3</button>
-            <button id="btnSpc" class="btn chip" onclick="setChip('SPC')">SPC700</button>
-            <button id="btnNes" class="btn chip" onclick="setChip('NES')">NES</button>
-        </div>
-        <div id="bank-row">
-            <button id="bank0" class="btn bank active" onclick="setBank(0)">P1</button>
-            <button id="bank1" class="btn bank" onclick="setBank(1)">P2</button>
-            <button id="bank2" class="btn bank" onclick="setBank(2)">P3</button>
-            <button id="bank3" class="btn bank" onclick="setBank(3)">P4</button>
-            <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" onclick="toggleAllPlay()">ALL</button>
-        </div>
-        <div id="bucket-grid"></div>
-        <div id="controls">
-            <button class="btn kill" onclick="window.location.reload()">RESET</button>
-            <div class="row">
-                <button id="btnWhir" class="btn kin" onclick="toggleMod('whir')">WHIR</button>
-                <button id="btnRots" class="btn kin" onclick="toggleMod('rots')">ROTS</button>
-                <button id="btnFrac" class="btn kin" onclick="toggleMod('frac')">FRAC</button>
-                <button class="btn step" onclick="adjustGhost(-0.1)">-</button>
-                <button id="btnGhst" class="btn kin" onclick="toggleMod('ghst')">GHST</button>
-                <button class="btn step" onclick="adjustGhost(0.1)">+</button>
-            </div>
-            <div class="row">
-                <button id="btnSat" class="btn fx" onclick="toggleMod('sat')">SAT</button>
-                <button id="btnGran" class="btn fx" onclick="toggleMod('gran')">GRAN</button>
-                <button id="btnWah" class="btn fx" onclick="toggleMod('wah')">WAH</button>
-                <button id="btnBit" class="btn fx" onclick="toggleMod('bit')">BIT</button>
-            </div>
-            <div class="row">
-                <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
-                <button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
-                <button class="btn step" onclick="adjustSpring(-20)">-</button>
-                <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPRING</button>
-                <button class="btn step" onclick="adjustSpring(20)">+</button>
-            </div>
-            <div class="row">
-                <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
-                <button id="btnTheremin" class="btn" onclick="toggleMod('theremin')">THRM</button>
-                <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec')">REC</button>
-                <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
-                <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
-                <button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
-            </div>
-        </div>
-    </div>
+<body oncontextmenu="return false;">
+<div id="overlay" onclick="setupEngine()">v2.42 POLYPHONIC<br>TAP TO START</div>
+<canvas id="vortexCanvas"></canvas>
+<div id="ui-layer">
+<div id="chip-row">
+<button id="btnZ80" class="btn chip" onclick="setChip('Z80')">Z80</button>
+<button id="btnPaula" class="btn chip" onclick="setChip('PAULA')">PAULA</button>
+<button id="btnSid" class="btn chip" onclick="setChip('SID')">SID</button>
+<button id="btnOpl3" class="btn chip" onclick="setChip('OPL3')">OPL3</button>
+<button id="btnSpc" class="btn chip" onclick="setChip('SPC')">SPC</button>
+<button id="btnNes" class="btn chip" onclick="setChip('NES')">NES</button>
+</div>
+<div id="bank-row">
+<button id="bank0" class="btn bank active" onclick="setBank(0)">P1</button>
+<button id="bank1" class="btn bank" onclick="setBank(1)">P2</button>
+<button id="bank2" class="btn bank" onclick="setBank(2)">P3</button>
+<button id="bank3" class="btn bank" onclick="setBank(3)">P4</button>
+<button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" onclick="toggleAllPlay()">ALL</button>
+</div>
+<div id="bucket-grid"></div>
+<div id="controls">
+<button class="btn kill" onclick="window.location.reload()">RESET</button>
+<div class="row">
+<button id="btnWhir" class="btn kin" onclick="toggleMod('whir')">WHIR</button>
+<button id="btnRots" class="btn kin" onclick="toggleMod('rots')">ROTS</button>
+<button id="btnFrac" class="btn kin" onclick="toggleMod('frac')">FRAC</button>
+<button id="btnGhst" class="btn kin" onclick="toggleMod('ghst')">GHST</button>
+</div>
+<div class="row">
+<button id="btnSat" class="btn fx" onclick="toggleMod('sat')">SAT</button>
+<button id="btnGran" class="btn fx" onclick="toggleMod('gran')">GRAN</button>
+<button id="btnWah" class="btn fx" onclick="toggleMod('wah')">WAH</button>
+<button id="btnBit" class="btn fx" onclick="toggleMod('bit')">BIT</button>
+</div>
+<div class="row">
+<button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
+<button id="btnRing" class="btn" onclick="toggleMod('ring')">RING</button>
+<button class="btn bank" onclick="adjustSpring(-20)">-</button>
+<button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPR</button>
+<button class="btn bank" onclick="adjustSpring(20)">+</button>
+</div>
+<div class="row">
+<button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
+<button id="btnThrm" class="btn" onclick="toggleMod('theremin')">THRM</button>
+<button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec')">REC</button>
+<button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
+<button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
+<button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
+</div>
+</div>
+</div>
 <script>
-    const canvas = document.getElementById('vortexCanvas'), gl = canvas.getContext('webgl');
-    const bucketGrid = document.getElementById('bucket-grid');
-    for(let i=0; i<64; i++) { let b = document.createElement('div'); b.className = 'bucket'; b.id = 'bucket-' + i; bucketGrid.appendChild(b); }
-    const vs = `attribute vec4 a_position; void main() { gl_Position = a_position; }`;
-    const fs = `precision mediump float; uniform float u_time; uniform vec2 u_resolution; uniform int u_fae; uniform int u_active; uniform vec3 u_color; uniform float u_ghst;
-    void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution; if(u_active == 0) { gl_FragColor = vec4(u_fae == 1 ? 1.0 : 0.0, u_fae == 1 ? 1.0 : 0.02, 0.0, 1.0); return; }
-        float wiggle = sin(uv.y * (25.0 + u_ghst * 20.0) + u_time * 10.0) * (0.08 + u_ghst * 0.05);
-        float line = smoothstep(0.1, 0.0, abs(uv.x - 0.5 + wiggle));
-        vec3 col = u_fae == 1 ? (1.0 - u_color) : u_color;
-        gl_FragColor = vec4(col * line, 1.0);
-        if(u_fae == 1) gl_FragColor = vec4(1.0 - (1.0 - col) * line, 1.0);
-    }`;
-    function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
-    const program = gl.createProgram(); gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs)); gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs)); gl.linkProgram(program); gl.useProgram(program);
-    const uLocs = { time: gl.getUniformLocation(program, "u_time"), res: gl.getUniformLocation(program, "u_resolution"), fae: gl.getUniformLocation(program, "u_fae"), active: gl.getUniformLocation(program, "u_active"), color: gl.getUniformLocation(program, "u_color"), ghst: gl.getUniformLocation(program, "u_ghst") };
-    const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-    const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc;
-    let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, sat: false, gran: false, wah: false, bit: false, ebow: false, whir: false, rots: false, frac: false, ghst: false, theremin: false };
-    let seq = { rec: false, play: false, step: 0, currentBank: 0, allPlay: false, banks: Array.from({length:4}, () => new Array(64).fill(null)) };
-    let ghostMemory = [], springVal = 0, ghostForce = 0.5, currentRgb = [0, 1, 0.5], liveTouching = false;
-
-    function setupEngine() {
-        if (audioCtx) return; audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination);
-        filterNode = audioCtx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 20000; filterNode.connect(masterGain);
-        satNode = audioCtx.createWaveShaper(); let c = new Float32Array(44100); for(let i=0; i<44100; i++){ let x = i*2/44100-1; c[i] = (Math.PI+400)*x/(Math.PI+400*Math.abs(x)); } satNode.curve = c; satNode.connect(filterNode);
-        delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3; let fb = audioCtx.createGain(); fb.gain.value = 0.4; delayNode.connect(fb); fb.connect(delayNode); delayNode.connect(satNode);
-        ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain(); ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
-        document.getElementById('overlay').style.display = 'none';
-    }
-    function syncRouting(v) { if (!v || !v.gain) return; v.gain.disconnect(); let target = mods.gran ? delayNode : (mods.sat ? satNode : filterNode); if(mods.ring) { v.gain.connect(ringGain); ringGain.connect(target); } else { v.gain.connect(target); } }
-    function setFreq(v, angle) {
-        let base = (mods.fae ? (2000 - (angle / 360) * 1960) : (40 + (angle / 360) * 760));
-        if (mods.spring) base += springVal;
-        if (mods.whir) base += Math.sin(audioCtx.currentTime * 15) * 50;
-        v.osc.type = mods.theremin ? 'sine' : (mods.fae ? 'triangle' : 'sawtooth');
-        v.osc.frequency.setTargetAtTime(base, audioCtx.currentTime, mods.ebow ? 0.3 : 0.05);
-        v.lfoG.gain.setTargetAtTime(mods.wind ? 15 : 0, audioCtx.currentTime, 0.1); v.lastAngle = angle;
-        let hue=(angle/360)*285; if(mods.fae) hue=285-hue; let rgb=hslToRgb(hue/360, 1, 0.5); if(!v.isSeq) currentRgb = rgb;
-        return `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
-    }
-    function handleInput(e) {
-        setupEngine(); if(e.target.tagName === 'BUTTON') return;
-        liveTouching = true;
-        for(let i=0; i<e.touches.length; i++) {
-            let t = e.touches[i], id = t.identifier; let ang = (t.clientX / window.innerWidth) * 360;
-            if(!voices[id]) { voices[id] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain() }; voices[id].osc.connect(voices[id].gain); voices[id].lfo.connect(voices[id].lfoG); voices[id].lfoG.connect(voices[id].osc.frequency); voices[id].lfo.start(); voices[id].osc.start(); }
-            let c = setFreq(voices[id], ang); syncRouting(voices[id]); voices[id].gain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 0.05);
-            if(seq.rec) { seq.banks[seq.currentBank][seq.step] = { a: ang, c: c }; let b = document.getElementById('bucket-' + seq.step); if(b) { b.classList.add('filled'); b.style.backgroundColor = c; } }
-        }
-    }
-    function setBank(i) { seq.currentBank = i; document.querySelectorAll('.btn.bank').forEach(b => b.classList.remove('active')); document.getElementById('bank' + i).classList.add('active'); refreshBuckets(); }
-    function refreshBuckets() { document.querySelectorAll('.bucket').forEach(b => { b.classList.remove('filled'); b.style.backgroundColor = ''; }); seq.banks[seq.currentBank].forEach((d, i) => { if (d) { let b = document.getElementById('bucket-' + i); b.classList.add('filled'); b.style.backgroundColor = d.c; } }); }
-    function stopAll() { seq.play = seq.rec = false; seq.step = 0; if(voices['seq']){ voices['seq'].osc.stop(); delete voices['seq']; } }
-    function toggleMod(m) { setupEngine(); mods[m]=!mods[m]; document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', mods[m]); if(m==='wah') filterNode.frequency.setTargetAtTime(mods.wah?800:20000, audioCtx.currentTime, 0.1); }
-    function toggleFae() { mods.fae = !mods.fae; document.body.classList.toggle('fae-active', mods.fae); refreshBuckets(); }
-    function adjustGhost(a) { ghostForce = Math.max(0.1, Math.min(2.0, ghostForce+a)); }
-    function adjustSpring(a) { springVal += a; }
-    function toggleAllPlay() { seq.allPlay = !seq.allPlay; document.getElementById('btnAllPlay').classList.toggle('active', seq.allPlay); }
-    function toggleSeq(m) { setupEngine(); if(m==='rec'){seq.rec=!seq.rec; if(seq.rec)seq.step=0;} if(m==='play')seq.play=!seq.play; document.getElementById('btnRec').classList.toggle('active',seq.rec); document.getElementById('btnPlay').classList.toggle('active',seq.play); }
-    function hslToRgb(h,s,l){let r,g,b;if(s==0){r=g=b=l;}else{const q2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=q2r(p,q,h+1/3);g=q2r(p,q,h);b=q2r(p,q,h-1/3);}return [r,g,b];}
-    
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
-    canvas.addEventListener('touchend', (e) => { 
-        for(let id in voices) {
-            let stillTouching = false;
-            for(let j=0; j<e.touches.length; j++) { if(e.touches[j].identifier == id) stillTouching = true; }
-            if(!stillTouching && id !== 'seq') { voices[id].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1); }
-        }
-        if(e.touches.length == 0) liveTouching = false;
-    });
-
-    setInterval(() => {
-        if (!audioCtx) return; document.querySelectorAll('.bucket').forEach(b => b.classList.remove('playhead'));
-        let ab = document.getElementById('bucket-' + seq.step); if(ab) ab.classList.add('playhead');
-        if(seq.play) {
-            let d = seq.banks[seq.currentBank][seq.step];
-            if(d) { if(!voices['seq']) { voices['seq'] = { osc: audioCtx.createOscillator(), gain: audioCtx.createGain(), lfo: audioCtx.createOscillator(), lfoG: audioCtx.createGain(), isSeq: true }; voices['seq'].osc.connect(voices['seq'].gain); voices['seq'].lfo.connect(voices['seq'].lfoG); voices['seq'].lfoG.connect(voices['seq'].osc.frequency); voices['seq'].lfo.start(); voices['seq'].osc.start(); } setFreq(voices['seq'], d.a); syncRouting(voices['seq']); voices['seq'].gain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 0.02); let hue=(d.a/360)*285; if(mods.fae) hue=285-hue; currentRgb=hslToRgb(hue/360,1,0.5); } 
-            else if(voices['seq']) voices['seq'].gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-        }
-        seq.step++; if(seq.step >= 64) { seq.step = 0; if(seq.allPlay && seq.play) { seq.currentBank = (seq.currentBank + 1) % 4; setBank(seq.currentBank); } }
-    }, 125);
-
-    function render(t) {
-        gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);
-        gl.uniform1f(uLocs.time, t*0.001); gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-        gl.uniform1i(uLocs.fae, mods.fae?1:0); gl.uniform1i(uLocs.active, (seq.play || liveTouching)?1:0);
-        gl.uniform3f(uLocs.color, currentRgb[0], currentRgb[1], currentRgb[2]); gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
-        gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
-    }
-    requestAnimationFrame(render);
-    function setChip(m) { setupEngine(); currentChip = m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()).classList.add('active'); }
+const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),grid=document.getElementById('bucket-grid');
+for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
+const vs=`attribute vec4 a_position;void main(){gl_Position=a_position;}`,fs=`precision mediump float;uniform float u_time;uniform vec2 u_res;uniform int u_fae;uniform int u_active;uniform vec3 u_col;
+void main(){vec2 uv=gl_FragCoord.xy/u_res;if(u_active==0){gl_FragColor=vec4(u_fae==1?1.:0.,u_fae==1?1.:0.02,0.,1.);return;}
+float wiggle=sin(uv.y*25.+u_time*10.)*0.08;float line=smoothstep(0.1,0.,abs(uv.x-0.5+wiggle));
+vec3 c=u_fae==1?(1.-u_col):u_col;gl_FragColor=vec4(c*line,1.);if(u_fae==1)gl_FragColor=vec4(1.-(1.-c)*line,1.);}`;
+function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
+const prg=gl.createProgram();gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
+const uL={t:gl.getUniformLocation(prg,"u_time"),r:gl.getUniformLocation(prg,"u_res"),f:gl.getUniformLocation(prg,"u_fae"),a:gl.getUniformLocation(prg,"u_active"),c:gl.getUniformLocation(prg,"u_col")};
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+const pL=gl.getAttribLocation(prg,"a_position");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
+let aX,mG,fN,sN,dN,rG,rO,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0};
+let seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},spr=0,rgb=[0,1,0.5],lt=0;
+function setupEngine(){if(aX)return;aX=new(window.AudioContext||window.webkitAudioContext)();mG=aX.createGain();mG.connect(aX.destination);
+fN=aX.createBiquadFilter();fN.type='lowpass';fN.frequency.value=20000;fN.connect(mG);
+sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x))}sN.curve=c;sN.connect(fN);
+dN=aX.createDelay(1.);dN.delayTime.value=0.3;let fb=aX.createGain();fb.gain.value=0.4;dN.connect(fb);fb.connect(dN);dN.connect(sN);
+rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
+document.getElementById('overlay').style.display='none'}
+function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t=mods.gran?dN:(mods.sat?sN:fN);if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
+function hR(h,s,l){let r,g,b,q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q,t=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [t(p,q,h+1/3),t(p,q,h),t(p,q,h-1/3)]}
+function setF(v,a){let b=mods.fae?(2000-(a/360)*1960):(40+(a/360)*760);if(mods.spring)b+=spr;if(mods.whir)b+=Math.sin(aX.currentTime*15)*50;
+v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');v.osc.frequency.setTargetAtTime(b,aX.currentTime,0.05);v.lfoG.gain.setTargetAtTime(mods.wind?15:0,aX.currentTime,0.1);v.last=a;
+let hue=(a/360)*285;if(mods.fae)hue=285-hue;let c=hR(hue/360,1,0.5);if(!v.sq)rgb=c;return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
+function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;lt=e.touches.length>0;for(let i=0;i<e.touches.length;i++){
+let t=e.touches[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].lfo.connect(vcs[id].lfoG);vcs[id].lfoG.connect(vcs[id].osc.frequency);vcs[id].lfo.start();vcs[id].osc.start()}
+let c=setF(vcs[id],ang);sync(vcs[id]);vcs[id].gain.gain.setTargetAtTime(0.4,aX.currentTime,0.05);
+if(seq.rec){seq.banks[seq.bank][seq.step]={a:ang,c:c};let b=document.getElementById('bucket-'+seq.step);if(b){b.style.background=c}}}}
+canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:false});canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:false});
+canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++){if(e.touches[j].identifier==id)s=1}if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1)}if(!e.touches.length)lt=0});
+function setBank(i){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
+function rB(){document.querySelectorAll('.bucket').forEach(b=>{b.style.background=''});seq.banks[seq.bank].forEach((d,i)=>{if(d){let b=document.getElementById('bucket-'+i);b.style.background=d.c}})}
+function toggleMod(m){setupEngine();mods[m]=!mods[m];document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1)}
+function stopAll(){seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}}
+function toggleSeq(m){setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
+function toggleAllPlay(){seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
+function toggleFae(){mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);rB()}
+function adjustSpring(a){spr+=a}
+function setChip(m){setupEngine();document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));document.getElementById('btn'+m).classList.add('active')}
+setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
+if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain(),sq:1};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].lfo.connect(vcs['seq'].lfoG);vcs['seq'].lfoG.connect(vcs['seq'].osc.frequency);vcs['seq'].lfo.start();vcs['seq'].osc.start()}setF(vcs['seq'],d.a);sync(vcs['seq']);vcs['seq'].gain.gain.setTargetAtTime(0.4,aX.currentTime,0.02);let hue=(d.a/360)*285;if(mods.fae)hue=285-hue;rgb=hR(hue/360,1,0.5)}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,0.05)}
+seq.step++;if(seq.step>=64){seq.step=0;if(seq.all&&seq.play){seq.bank=(seq.bank+1)%4;setBank(seq.bank)}}},125);
+function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*0.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform1i(uL.f,mods.fae);gl.uniform1i(uL.a,seq.play||lt);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
+requestAnimationFrame(render);
 </script>
 </body>
 </html>
