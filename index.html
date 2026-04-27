@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CRi2 / MARIAH v2.36 - Alignment Master</title>
+    <title>CRi2 / MARIAH v2.37 - Sweet-Spot Alignment</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0f0; transition: background 0.1s; }
         body.fae-active { background: #fff !important; color: #000 !important; }
         canvas { width: 100vw; height: 100vh; display: block; touch-action: none; position: fixed; top: 0; left: 0; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         
-        /* v2.36: Top moved down 3 (to 220px) */
-        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 220px; pointer-events: auto; }
+        /* v2.37: Raised to 120px to hit the sweet spot (4-unit lift) */
+        #chip-row { display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 120px; pointer-events: auto; }
         #bank-row { display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 8px; pointer-events: auto; }
         
         .btn.chip { background: #000; border: 1.5px solid #0cf; color: #0cf; padding: 10px 4px; font-size: 12px; min-width: 55px; border-radius: 6px; cursor: pointer; }
@@ -24,7 +24,6 @@
         .bucket.active { transform: scale(1.3); z-index: 1000; box-shadow: 0 0 10px currentColor; }
         .bucket.playhead { border: 2px solid #fff; box-shadow: 0 0 5px #fff; z-index: 50; }
 
-        /* v2.36: Bottom moved down 4 units (Reduced padding/margin) */
         #controls { position: fixed; bottom: 0; left: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom, 5px); pointer-events: auto; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; z-index: 9999; background: rgba(0,0,0,0.8); }
         .fae-active #controls { background: rgba(255,255,255,0.8); }
         .row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: center; margin-bottom: 2px; }
@@ -38,11 +37,14 @@
         .btn.kill { border-color: #fff; color: #fff; background: #600; width: 95%; font-size: 18px; padding: 12px; min-width: auto; margin-bottom: 4px; }
         .btn.step { min-width: 40px; padding: 16px 4px; }
         
+        .slider-box { background: #111; padding: 8px 12px; border: 2px solid #0ff; border-radius: 10px; display: flex; align-items: center; width: 220px; }
+        input[type=range] { flex-grow: 1; accent-color: #0ff; height: 30px; }
+        
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #0f0; z-index: 1000000; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="overlay" onclick="setupEngine()">v2.36 ALIGNMENT MASTER<br>TAP TO INITIALIZE</div>
+    <div id="overlay" onclick="setupEngine()">v2.37 SWEET-SPOT ALIGN<br>TAP TO INITIALIZE</div>
     <canvas id="vortexCanvas"></canvas>
     <div id="ui-layer">
         <div id="chip-row">
@@ -93,6 +95,11 @@
                 <button id="btnSave" class="btn" style="border-color:#0cf;color:#0cf" ontouchstart="saveTrackerMod()">SAVE</button>
                 <button id="btnFae" class="btn" ontouchstart="toggleFae()">FAE</button>
             </div>
+            <div class="row">
+                <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(0.5)">OCT-</button>
+                <div class="slider-box"><input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.3"></div>
+                <button class="btn" style="border-color:#0ff;color:#0ff" ontouchstart="shiftOct(2.0)">OCT+</button>
+            </div>
         </div>
     </div>
 
@@ -124,7 +131,7 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
     const posLoc = gl.getAttribLocation(program, "a_position"); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-    let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc;
+    let audioCtx, masterGain, filterNode, satNode, delayNode, ringGain, ringOsc, ghostGain;
     let voices = {}, mods = { wind: false, spring: false, ring: false, fae: false, sat: false, gran: false, wah: false, bit: false, ebow: false, whir: false, rots: false, frac: false, ghst: false, theremin: false };
     let seq = { rec: false, play: false, step: 0, currentBank: 0, allPlay: false, banks: [new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null), new Array(64).fill(null)] };
     let ghostMemory = []; 
@@ -141,6 +148,7 @@
         delayNode = audioCtx.createDelay(1.0); delayNode.delayTime.value = 0.3; let fb = audioCtx.createGain(); fb.gain.value = 0.4; delayNode.connect(fb); fb.connect(delayNode); delayNode.connect(satNode);
         ringOsc = audioCtx.createOscillator(); ringGain = audioCtx.createGain(); ringOsc.type = 'sine'; ringOsc.frequency.value = 60; ringOsc.connect(ringGain.gain); ringOsc.start();
         document.getElementById('overlay').style.display = 'none';
+        document.getElementById('volSlider').addEventListener('input', function() { if(masterGain) masterGain.gain.setTargetAtTime(this.value, audioCtx.currentTime, 0.02); });
     }
 
     function syncRouting(v) {
@@ -227,7 +235,7 @@
         gl.uniform1f(uLocs.ghst, mods.ghst?ghostForce:0.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6); requestAnimationFrame(render);
     }
-    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.36", patterns: seq.banks }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_track_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
+    function saveTrackerMod() { const sD = JSON.stringify({ version: "2.37", patterns: seq.banks }); const b = new Blob([sD], { type: "application/json" }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `mariah_track_${Date.now()}.json`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); }
     requestAnimationFrame(render);
 </script>
 </body>
