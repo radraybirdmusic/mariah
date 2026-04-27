@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.45 - HAMMER ISOLATION</title>
+<meta charset="UTF-8"><title>MARIAH v2.46 - THE HAMMER ROW</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -22,12 +22,13 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .btn.active{background:#0f0!important;color:#000!important;box-shadow:0 0 10px #0f0}
 .btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
 .btn.kin{border-color:#f0f;color:#f0f}.btn.kin.active{background:#f0f!important;color:#000!important}
+.btn.ham{border-color:#fff;color:#fff;min-width:120px}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:12px;margin-bottom:5px}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center}
 </style>
 </head>
 <body oncontextmenu="return false;">
-<div id="overlay" onclick="setupEngine()">v2.45 HAMMER ISOLATION<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">v2.46 PURE TONE + HAMMER<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
 <div id="chip-row">
@@ -59,6 +60,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 <button id="btnGran" class="btn fx" onclick="toggleMod('gran')">GRAN</button>
 <button id="btnWah" class="btn fx" onclick="toggleMod('wah')">WAH</button>
 <button id="btnBit" class="btn fx" onclick="toggleMod('bit')">BIT</button>
+<button id="btnRock" class="btn fx" onclick="toggleMod('rock')">ROCK</button>
 </div>
 <div class="row">
 <button id="btnWind" class="btn" onclick="toggleMod('wind')">WIND</button>
@@ -66,14 +68,16 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 <button id="btnSpring" class="btn" onclick="toggleMod('spring')">SPR</button>
 </div>
 <div class="row">
-<button id="btnOctDown" class="btn" style="border-color:#0cf;color:#0cf" onclick="shiftOct(0.5)">OCT-</button>
-<button id="btnOctUp" class="btn" style="border-color:#0cf;color:#0cf" onclick="shiftOct(2.0)">OCT+</button>
 <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
 <button id="btnTherm" class="btn" onclick="toggleMod('theremin')">THERM</button>
 <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec')">REC</button>
 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
 <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
 <button id="btnFae" class="btn" onclick="toggleFae()">FAE</button>
+</div>
+<div class="row">
+<button id="btnHamDown" class="btn ham" onclick="shiftOct(0.5)">HAM DOWN</button>
+<button id="btnHamUp" class="btn ham" onclick="shiftOct(2.0)">HAM UP</button>
 </div>
 </div>
 </div>
@@ -89,7 +93,7 @@ const prg=gl.createProgram();gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.
 const uL={t:gl.getUniformLocation(prg,"u_time"),r:gl.getUniformLocation(prg,"u_res"),f:gl.getUniformLocation(prg,"u_fae"),a:gl.getUniformLocation(prg,"u_active"),c:gl.getUniformLocation(prg,"u_col")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_position");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
-let aX,mG,fN,sN,dN,rG,rO,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0};
+let aX,mG,fN,sN,dN,rG,rO,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0,rock:0};
 let seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},spr=0,rgb=[0,1,0.5],lt=0,oct=1.0;
 function setupEngine(){if(aX)return;aX=new(window.AudioContext||window.webkitAudioContext)();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.frequency.value=20000;fN.connect(mG);
@@ -97,11 +101,11 @@ sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){
 dN=aX.createDelay(1.);dN.delayTime.value=0.3;let fb=aX.createGain();fb.gain.value=0.4;dN.connect(fb);fb.connect(dN);dN.connect(sN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
-function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t=mods.gran?dN:(mods.sat?sN:fN);if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
+function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t=mods.rock?dN:(mods.sat?sN:fN);if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
 function hR(h,s,l){let r,g,b,q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q,t=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [t(p,q,h+1/3),t(p,q,h),t(p,q,h-1/3)]}
 function setF(v,a){let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;if(mods.spring)b+=spr;if(mods.whir)b+=Math.sin(aX.currentTime*15)*50;
 v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');v.osc.frequency.setTargetAtTime(b,aX.currentTime,0.05);
-v.lfoG.gain.setTargetAtTime(mods.wind?25:0,aX.currentTime,0.05);v.last=a;
+v.lfoG.gain.setTargetAtTime(mods.wind?30:0,aX.currentTime,0.1);v.last=a;
 let hue=(a/360)*285;if(mods.fae)hue=285-hue;let c=hR(hue/360,1,0.5);if(!v.sq)rgb=c;return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;lt=e.touches.length>0;for(let i=0;i<e.touches.length;i++){
 let t=e.touches[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].lfo.connect(vcs[id].lfoG);vcs[id].lfoG.connect(vcs[id].osc.frequency);vcs[id].lfo.start();vcs[id].osc.start()}
@@ -111,7 +115,7 @@ canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:fals
 canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1)}if(!e.touches.length)lt=0});
 function setBank(i){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-function toggleMod(m){setupEngine();mods[m]=!mods[m];let id=(m==='theremin')?'btnTherm':'btn'+m.charAt(0).toUpperCase()+m.slice(1);let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1);for(let id in vcs)if(vcs[id])setF(vcs[id],vcs[id].last)}
+function toggleMod(m){setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1);for(let id in vcs)if(vcs[id])setF(vcs[id],vcs[id].last)}
 function stopAll(){seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m){setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
 function toggleAllPlay(){seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
