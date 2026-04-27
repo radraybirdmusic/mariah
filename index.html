@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.43 - HAMMER RESTORE</title>
+<meta charset="UTF-8"><title>MARIAH v2.44 - THERM FIX</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -9,7 +9,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
 #chip-row{display:flex;gap:4px;justify-content:center;margin-top:120px;pointer-events:auto}
 #bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
-.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px;cursor:pointer}
+.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:52px;border-radius:4px;cursor:pointer}
 .btn.chip.active{background:#0cf!important;color:#000!important;box-shadow:0 0 10px #0cf}
 .btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer}
 .btn.bank.active{background:#fff!important;color:#000!important}
@@ -18,7 +18,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .bucket.playhead{border:2px solid #fff;box-shadow:0 0 5px #fff}
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:5px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:4px;align-items:center;z-index:9999;background:rgba(0,0,0,0.8)}
 .row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center}
-.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 8px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:80px;touch-action:none;cursor:pointer}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 8px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:85px;touch-action:none;cursor:pointer}
 .btn.active{background:#0f0!important;color:#000!important;box-shadow:0 0 10px #0f0}
 .btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
 .btn.kin{border-color:#f0f;color:#f0f}.btn.kin.active{background:#f0f!important;color:#000!important}
@@ -27,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body oncontextmenu="return false;">
-<div id="overlay" onclick="setupEngine()">v2.43 THE HAMMER<br>TAP TO INITIALIZE</div>
+<div id="overlay" onclick="setupEngine()">v2.44 THERM RESTORED<br>TAP TO START CIRCUIT</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
 <div id="chip-row">
@@ -69,7 +69,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </div>
 <div class="row">
 <button id="btnEbow" class="btn" onclick="toggleMod('ebow')">EBOW</button>
-<button id="btnThrm" class="btn" onclick="toggleMod('theremin')">THRM</button>
+<button id="btnTherm" class="btn" onclick="toggleMod('theremin')">THERM</button>
 <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec')">REC</button>
 <button id="btnPlay" class="btn" onclick="toggleSeq('play')">PLAY</button>
 <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
@@ -110,7 +110,7 @@ canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:fals
 canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1)}if(!e.touches.length)lt=0});
 function setBank(i){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-function toggleMod(m){setupEngine();mods[m]=!mods[m];document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1);for(let id in vcs)if(vcs[id])setF(vcs[id],vcs[id].last)}
+function toggleMod(m){setupEngine();mods[m]=!mods[m];let id=(m==='theremin')?'btnTherm':'btn'+m.charAt(0).toUpperCase()+m.slice(1);let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1);for(let id in vcs)if(vcs[id])setF(vcs[id],vcs[id].last)}
 function stopAll(){seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m){setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
 function toggleAllPlay(){seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
