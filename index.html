@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.50 - THE LOCKDOWN</title>
+<meta charset="UTF-8"><title>MARIAH v2.51</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -9,25 +9,25 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
 #chip-row{display:flex;gap:4px;justify-content:center;margin-top:120px;pointer-events:auto}
 #bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
-.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px;cursor:pointer}
+.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.chip.active{background:#0cf!important;color:#000!important;box-shadow:0 0 10px #0cf}
-.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer}
+.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.bank.active{background:#fff!important;color:#000!important}
 #bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
 .bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808}
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.8)}
-.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
-.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 10px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:85px;touch-action:none;cursor:pointer}
+.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 10px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:85px;touch-action:none;cursor:pointer;pointer-events:auto}
 .btn.active{background:#0f0!important;color:#000!important;box-shadow:0 0 10px #0f0}
 .btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
 .btn.kin{border-color:#f0f;color:#f0f}.btn.kin.active{background:#f0f!important;color:#000!important}
 .btn.ham{border-color:#fff;color:#fff;min-width:130px}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:12px;margin-bottom:5px}
-#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine(event)">v2.50 THE LOCKDOWN<br>TAP TO INITIALIZE</div>
+<div id="overlay" onclick="setupEngine(event)">MARIAH v2.51<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
 <div id="chip-row">
@@ -69,27 +69,62 @@ const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.
 const pL=gl.getAttribLocation(prg,"a_position");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
 let aX,mG,fN,sN,dN,rG,rO,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0,rock:0};
 let seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},spr=0,rgb=[0,1,0.5],lt=0,oct=1.0;
+
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new(window.AudioContext||window.webkitAudioContext)();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.frequency.value=20000;fN.connect(mG);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x))}sN.curve=c;sN.connect(fN);
 dN=aX.createDelay(1.);dN.delayTime.value=0.3;let fb=aX.createGain();fb.gain.value=0.4;dN.connect(fb);fb.connect(dN);dN.connect(sN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
+
 function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t=mods.rock?dN:(mods.sat?sN:fN);if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
+
+function calcFreq(a){
+    let b=mods.fae?(2000-(a/360)*1960):(40+(a/360)*760);
+    let final = b*oct;
+    if(mods.spring) final += spr;
+    return final;
+}
+
+function shiftOct(m, e) {
+    if (e) e.stopPropagation();
+    setupEngine();
+    oct *= m;
+    if (oct < 0.125) oct = 0.125; 
+    if (oct > 8.0) oct = 8.0;
+    for (let id in vcs) {
+        if (vcs[id] && vcs[id].osc) {
+            let nB = calcFreq(vcs[id].last);
+            vcs[id].osc.frequency.setValueAtTime(nB, aX.currentTime);
+        }
+    }
+    let el = m > 1 ? document.getElementById('btnHamUp') : document.getElementById('btnHamDown');
+    el.classList.add('active');
+    setTimeout(() => el.classList.remove('active'), 100);
+}
+
+function setF(v,a){
+    let b = calcFreq(a);
+    if(mods.whir) b+=Math.sin(aX.currentTime*15)*50;
+    v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');
+    v.osc.frequency.setValueAtTime(b,aX.currentTime); 
+    v.lfoG.gain.setTargetAtTime(mods.wind?30:0,aX.currentTime,0.1);
+    v.last=a;
+    let hue=(a/360)*285;if(mods.fae)hue=285-hue;let c=hR(hue/360,1,0.5);if(!v.sq)rgb=c;
+    return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`
+}
+
 function hR(h,s,l){let r,g,b,q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q,t=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [t(p,q,h+1/3),t(p,q,h),t(p,q,h-1/3)]}
-function calcFreq(a){let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;if(mods.spring)b+=spr;return b;}
-function setF(v,a){let b=calcFreq(a);if(mods.whir)b+=Math.sin(aX.currentTime*15)*50;
-v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');
-v.osc.frequency.setValueAtTime(b,aX.currentTime); 
-v.lfoG.gain.setTargetAtTime(mods.wind?30:0,aX.currentTime,0.1);v.last=a;
-let hue=(a/360)*285;if(mods.fae)hue=285-hue;let c=hR(hue/360,1,0.5);if(!v.sq)rgb=c;return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
-function shiftOct(m,e){if(e)e.stopPropagation();oct*=m;for(let id in vcs){if(vcs[id]){let newB=calcFreq(vcs[id].last);vcs[id].osc.frequency.setValueAtTime(newB,aX.currentTime);}}}
+
 function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;lt=e.touches.length>0;for(let i=0;i<e.touches.length;i++){
 let t=e.touches[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].lfo.connect(vcs[id].lfoG);vcs[id].lfoG.connect(vcs[id].osc.frequency);vcs[id].lfo.start();vcs[id].osc.start()}
 let c=setF(vcs[id],ang);sync(vcs[id]);vcs[id].gain.gain.setTargetAtTime(0.4,aX.currentTime,0.05);
 if(seq.rec){seq.banks[seq.bank][seq.step]={a:ang,c:c};let b=document.getElementById('bucket-'+seq.step);if(b)b.style.background=c}}}
-canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:false});canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:false});
+
+canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:false});
 canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1)}if(!e.touches.length)lt=0});
+
 function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
 function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,0.1);for(let id in vcs)if(vcs[id]){let nb=calcFreq(vcs[id].last);vcs[id].osc.frequency.setValueAtTime(nb,aX.currentTime);sync(vcs[id]);}}
@@ -98,6 +133,7 @@ function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq
 function toggleAllPlay(e){if(e)e.stopPropagation();seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
 function toggleFae(e){if(e)e.stopPropagation();mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);document.getElementById('btnFae').classList.toggle('active',mods.fae);rB()}
 function setChip(m,e){if(e)e.stopPropagation();setupEngine();document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));document.getElementById('btn'+m).classList.add('active');for(let id in vcs)if(vcs[id]){let nb=calcFreq(vcs[id].last);vcs[id].osc.frequency.setValueAtTime(nb,aX.currentTime);}}
+
 setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
 if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain(),sq:1};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].lfo.connect(vcs['seq'].lfoG);vcs['seq'].lfoG.connect(vcs['seq'].osc.frequency);vcs['seq'].lfo.start();vcs['seq'].osc.start()}setF(vcs['seq'],d.a);sync(vcs['seq']);vcs['seq'].gain.gain.setTargetAtTime(0.4,aX.currentTime,0.02);let hue=(d.a/360)*285;if(mods.fae)hue=285-hue;rgb=hR(hue/360,1,0.5)}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,0.05)}
 seq.step++;if(seq.step>=64){seq.step=0;if(seq.all&&seq.play){seq.bank=(seq.bank+1)%4;setBank(seq.bank)}}},125);
