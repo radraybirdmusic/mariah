@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.54 - LOCKDOWN</title>
+<meta charset="UTF-8"><title>MARIAH v2.55 - SOUL RESTORE</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.05s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -15,7 +15,6 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .btn.bank.active{background:#fff!important;color:#000!important}
 #bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:12px auto 0 auto;pointer-events:auto}
 .bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808}
-.bucket.playhead{border:2px solid #fff;box-shadow:0 0 8px #fff}
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.8)}
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:14px 10px;text-transform:uppercase;font-weight:900;font-size:14px;border-radius:8px;min-width:85px;touch-action:none;cursor:pointer;pointer-events:auto}
@@ -28,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.54<br>TAP TO INITIALIZE</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.55<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
 <div id="chip-row">
@@ -49,7 +48,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 <div id="bucket-grid"></div>
 <div id="controls">
 <button class="btn kill" ontouchstart="window.location.reload()">!! NUCLEAR RESET !!</button>
-<div class="row"><button id="btnWhir" class="btn kin" ontouchstart="toggleMod('whir', event)">WHIR</button><button id="btnRots" class="btn kin" ontouchstart="toggleMod('rots', event)">ROTS</button><button id="btnFrac" class="btn kin" ontouchstart="toggleMod('frac', event)">FRAC</button><button id="btnGhst" class="btn kin" ontouchstart="toggleMod('ghst', event)">GHST</button></div>
+<div class="row"><button id="btnWhir" class="btn kin" ontouchstart="toggleMod('whir', event)">WHIR</button><button id="btnRots" class="btn kin" ontouchstart="toggleMod('rots', event)">ROTS</button><button id="btnFrac" class="btn kin" ontouchstart="toggleMod('frac', event)">FRAC</button><button id="btnGhst" class="btn kin" ontouchstart="toggleMod('ghst', event)">GHOST</button></div>
 <div class="row"><button id="btnSat" class="btn fx" ontouchstart="toggleMod('sat', event)">SAT</button><button id="btnGran" class="btn fx" ontouchstart="toggleMod('gran', event)">GRAN</button><button id="btnWah" class="btn fx" ontouchstart="toggleMod('wah', event)">WAH</button><button id="btnBit" class="btn fx" ontouchstart="toggleMod('bit', event)">BIT</button><button id="btnRock" class="btn fx" ontouchstart="toggleMod('rock', event)">ROCK</button></div>
 <div class="row"><button id="btnWind" class="btn" ontouchstart="toggleMod('wind', event)">WIND</button><button id="btnRing" class="btn" ontouchstart="toggleMod('ring', event)">RING</button><button id="btnSpring" class="btn" ontouchstart="toggleMod('spring', event)">SPR</button></div>
 <div class="row"><button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow', event)">EBOW</button><button id="btnTherm" class="btn" ontouchstart="toggleMod('theremin', event)">THERM</button><button id="btnRec" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleSeq('rec', event)">REC</button><button id="btnPlay" class="btn" ontouchstart="toggleSeq('play', event)">PLAY</button><button id="btnStop" class="btn" style="border-color:#fff;color:#fff" ontouchstart="stopAll(event)">STOP</button><button id="btnFae" class="btn" ontouchstart="toggleFae(event)">FAE</button></div>
@@ -68,25 +67,53 @@ const prg=gl.createProgram();gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.
 const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_position");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
-let aX,mG,fN,sN,dN,rG,rO,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0,rock:0};
-let seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},spr=0,rgb=[0,1,0.5],lt=0,oct=1.0;
+
+let aX,mG,fN,sN,dN,rG,rO,bitN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:0,rots:0,frac:0,ghst:0,theremin:0,rock:0};
+let seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},spr=0,rgb=[0,1,0.5],lt=0,oct=1.0,noteHistory=[];
+
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new(window.AudioContext||window.webkitAudioContext)();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.frequency.value=20000;fN.connect(mG);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x))}sN.curve=c;sN.connect(fN);
-dN=aX.createDelay(1.);dN.delayTime.value=0.3;let fb=aX.createGain();fb.gain.value=0.4;dN.connect(fb);fb.connect(dN);dN.connect(sN);
+bitN=aX.createGain();bitN.connect(sN);
+dN=aX.createDelay(1.);dN.delayTime.value=0.3;let fb=aX.createGain();fb.gain.value=0.6;dN.connect(fb);fb.connect(dN);dN.connect(bitN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
-function calcFreq(a){let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;if(mods.spring)b+=spr;if(mods.whir)b+=Math.sin(aX.currentTime*15)*50;if(mods.rots)b*=(1.+Math.sin(aX.currentTime*2)*0.1);if(mods.frac)b+=(Math.random()-.5)*80;return b}
-function forceAll(){for(let id in vcs)if(vcs[id]&&vcs[id].osc){let nf=calcFreq(vcs[id].last);vcs[id].osc.frequency.setValueAtTime(nf,aX.currentTime);vcs[id].lfoG.gain.setTargetAtTime(mods.wind?40:0,aX.currentTime,.05);sync(vcs[id])}}
-function shiftOct(m,e){if(e)e.stopPropagation();setupEngine();oct*=m;if(oct<0.0625)oct=0.0625;if(oct>16.)oct=16.;forceAll()}
-function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t=mods.rock?dN:(mods.sat?sN:fN);if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
-function setF(v,a){let b=calcFreq(a);v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');v.osc.frequency.setValueAtTime(b,aX.currentTime);v.lfoG.gain.setTargetAtTime(mods.wind?40:0,aX.currentTime,.05);v.last=a;let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq)rgb=c;return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
+
+function calcFreq(a){
+    let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
+    if(mods.spring) b+=200; 
+    if(mods.whir) b+=Math.sin(aX.currentTime*18)*70;
+    if(mods.rots) b*=(1.+Math.sin(aX.currentTime*8)*0.25);
+    if(mods.frac) b+=(Math.random()-.5)*150;
+    if(mods.ghst && noteHistory.length>1){
+        let avg = noteHistory.reduce((p,c)=>p+c,0)/noteHistory.length;
+        b = b*0.7 + avg*0.3 + Math.sin(aX.currentTime*5)*30;
+    }
+    return b;
+}
+
+function sync(v){if(!v||!v.gain)return;v.gain.disconnect();
+let target=mods.gran?dN:(mods.bit?bitN:(mods.sat?sN:fN));
+if(mods.ring){v.gain.connect(rG);rG.connect(target)}else{v.gain.connect(target)}}
+
+function setF(v,a){
+    let b=calcFreq(a);
+    if(!v.sq){noteHistory.push(b);if(noteHistory.length>4)noteHistory.shift();}
+    v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');
+    v.osc.frequency.setValueAtTime(b,aX.currentTime);
+    v.lfoG.gain.setTargetAtTime(mods.wind?50:0,aX.currentTime,.05);
+    v.last=a;
+    let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq)rgb=c;
+    return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
+
+function forceAll(){for(let id in vcs)if(vcs[id]&&vcs[id].osc){setF(vcs[id],vcs[id].last);sync(vcs[id])}}
+function shiftOct(m,e){if(e)e.stopPropagation();setupEngine();oct*=m;forceAll()}
 function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
 function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;lt=e.touches.length>0;for(let i=0;i<e.touches.length;i++){let t=e.touches[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].lfo.connect(vcs[id].lfoG);vcs[id].lfoG.connect(vcs[id].osc.frequency);vcs[id].lfo.start();vcs[id].osc.start()}let c=setF(vcs[id],ang);sync(vcs[id]);vcs[id].gain.gain.setTargetAtTime(0.4,aX.currentTime,.05);if(seq.rec){seq.banks[seq.bank][seq.step]={a:ang,c:c};let b=document.getElementById('bucket-'+seq.step);if(b)b.style.background=c}}}
 canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:false});canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:false});canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,.1)}if(!e.touches.length)lt=0});
 function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,.1);forceAll()}
+function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';if(m==='ghst')id='btnGhst';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?800:20000,aX.currentTime,.1);forceAll()}
 function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.querySelectorAll('.btn.active').forEach(b=>b.classList.remove('active'))}
 function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
 function toggleAllPlay(e){if(e)e.stopPropagation();seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
