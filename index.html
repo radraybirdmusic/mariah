@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.77 - TOUCHDOWN</title>
+<meta charset="UTF-8"><title>MARIAH v2.78 - TOUCHDOWN FIXED</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -31,7 +31,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.77<br>TOUCHDOWN GOAL LINE<br>TAP TO INITIALIZE</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.78<br>HARDWARE LOCK REPAIRED<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -99,20 +99,20 @@ void main(){
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
     vec2 p = uv - 0.5;
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
-    if(u_m1.y>0.5) s += sin(u_t*60.0)*0.3; // ROTS
-    if(u_m1.w>0.5) s *= (1.0 + tan(uv.y*10.0+u_t)*0.6); // GHOST
-    if(u_m2.y>0.5) s = fract(s*15.0)-0.5; // GRAN
-    if(u_m2.z>0.5) s = tan(s*2.0+u_t); // BROKE
-    if(u_m2.w>0.5) s = floor(s*6.0)/6.0; // BIT
-    if(u_m3.x>0.5) s += sin(uv.y*5.0-u_t*10.0)*0.5; // WIND
-    if(u_m3.z>0.5) s *= cos(atan(p.y,p.x)*15.0+u_t); // VIN
-    if(u_m4.x>0.5) s = sign(s)*abs(sin(u_t*20.0)); // ROCK
-    if(u_m4.y>0.5) s = 0.2*sign(sin(uv.y*200.0)); // EBOW
-    if(u_m4.z>0.5) s += sin(length(p)*80.0-u_t*25.0)*0.4; // THERM
+    if(u_m1.y>0.5) s += sin(u_t*60.0)*0.3; 
+    if(u_m1.w>0.5) s *= (1.0 + tan(uv.y*10.0+u_t)*0.6);
+    if(u_m2.y>0.5) s = fract(s*15.0)-0.5;
+    if(u_m2.z>0.5) s = tan(s*2.0+u_t);
+    if(u_m2.w>0.5) s = floor(s*6.0)/6.0;
+    if(u_m3.x>0.5) s += sin(uv.y*5.0-u_t*10.0)*0.5; 
+    if(u_m3.z>0.5) s *= cos(atan(p.y,p.x)*15.0+u_t);
+    if(u_m4.x>0.5) s = sign(s)*abs(sin(u_t*20.0));
+    if(u_m4.y>0.5) s = 0.2*sign(sin(uv.y*100.0));
+    if(u_m4.z>0.5) s += sin(length(p)*80.0-u_t*25.0)*0.4;
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
-    if(u_ch==1) l = step(0.44, uv.x+s*0.1)*step(uv.x+s*0.1, 0.56); // NES
-    if(u_ch==4) l *= (0.7 + 0.3*sin(uv.y*300.0)); // SID
-    if(u_ch==5) l = floor(l*3.0)/3.0; // PAULA
+    if(u_ch==1) l = step(0.44, uv.x+s*0.1)*step(uv.x+s*0.1, 0.56);
+    if(u_ch==4) l *= (0.7 + 0.3*sin(uv.y*300.0)); 
+    if(u_ch==5) l = floor(l*3.0)/3.0; 
     vec3 col = u_f==1?(1.0-u_c):u_c;
     gl_FragColor = vec4(col*l, 1.0);
     if(u_f==1) gl_FragColor = vec4(1.0-(1.0-col)*l, 1.0);
