@@ -1,28 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.66 - SID SOUL</title>
+<meta charset="UTF-8"><title>MARIAH v2.67 - SIGILS</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
 canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
-
 #hud{text-align:center;width:100%;font-size:5vw;font-weight:900;margin-top:60px;height:60px;transition:0.05s;white-space:nowrap;}
 .neon-glow{text-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);}
-.hz-pop{color:#ff00ff; text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;} /* Clean trace, no backdrop */
-
+.hz-pop{color:#ff00ff; text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;}
 #chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;pointer-events:auto}
 #bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
 .btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.chip.active{background:#0cf!important;color:#000!important}
 .btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:8px 14px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.bank.active{background:#fff!important;color:#000!important}
-
 #bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
 .bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808;transition:0.1s;}
 .bucket.playhead{border:3px solid #f0f !important;box-shadow:0 0 15px #f0f;z-index:10;}
-
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;touch-action:none;cursor:pointer;pointer-events:auto}
@@ -37,7 +33,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.66<br>SID JOY & MONSTER WAVES<br>TAP TO INITIALIZE</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.67<br>SIGIL GEN & SPC JOY<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -46,8 +42,8 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
         <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80', event)">Z80</button>
         <button id="btnNes" class="btn chip" ontouchstart="setChip('NES', event)">FAMICOM</button>
         <button id="btnSid" class="btn chip" ontouchstart="setChip('SID', event)">SID C64</button>
+        <button id="btnSpc" class="btn chip" ontouchstart="setChip('SPC', event)">SPC SNES</button>
         <button id="btnPaula" class="btn chip" ontouchstart="setChip('PAULA', event)">PAULA</button>
-        <button id="btnSpc" class="btn chip" ontouchstart="setChip('SPC', event)">SPC</button>
     </div>
     <div id="bank-row">
         <button id="bank0" class="btn bank active" ontouchstart="setBank(0, event)">P1</button>
@@ -97,25 +93,43 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),grid=document.getElementById('bucket-grid'),hud=document.getElementById('hud');
 const n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
 for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
-const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;uniform float u_f1;uniform float u_f2;uniform int u_chip;
-void main(){vec2 uv=gl_FragCoord.xy/u_r;if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
-float m1=sin(uv.y*20.*(u_f1*0.001)+u_t*10.)*0.1;
-float m2=cos(uv.x*15.*(u_f2*0.001)+u_t*5.)*0.08;
-float monster=m1+m2;
-float l=smoothstep(0.15,0.,abs(uv.x-0.5+monster));
-if(u_chip==1)l=step(0.47,uv.x+monster)*step(uv.x+monster,0.53);
-vec3 col=u_f==1?(1.-u_c):u_c;gl_FragColor=vec4(col*l,1.);if(u_f==1)gl_FragColor=vec4(1.-(1.-col)*l,1.);}`;
+const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
+uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
+uniform float u_f1;uniform float u_f2;uniform int u_chip;uniform vec4 u_mods; // x:bit, y:gran, z:broke, w:wah
+
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+    if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
+    
+    vec2 p = uv - 0.5;
+    float m1 = sin(atan(p.y,p.x)*3. + u_t*5.) * length(p);
+    float sigil = sin(uv.y*20.*(u_f1*0.001) + u_t*10.);
+    
+    // Sigil Morphing Logic
+    if(u_mods.x > 0.5) sigil = floor(sigil*4.0)/4.0; // BIT Sigil
+    if(u_mods.y > 0.5) sigil = fract(sigil*u_f1*0.01); // GRAN Sigil
+    if(u_mods.z > 0.5) sigil = tan(sigil + u_t); // BROKE Sigil
+    if(u_mods.w > 0.5) sigil += sin(length(p)*50. - u_t*10.)*0.2; // WAH Sigil
+    
+    float l = smoothstep(0.15, 0., abs(p.x + sigil*0.1));
+    if(u_chip==1) l = step(0.45, uv.x+sigil*0.05)*step(uv.x+sigil*0.05, 0.55);
+    
+    vec3 col=u_f==1?(1.-u_c):u_c;
+    gl_FragColor=vec4(col*l,1.);
+    if(u_f==1)gl_FragColor=vec4(1.-(1.-col)*l,1.);
+}`;
 function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
 const prg=gl.createProgram();gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
-const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),f2:gl.getUniformLocation(prg,"u_f2"),chip:gl.getUniformLocation(prg,"u_chip")};
+const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),f2:gl.getUniformLocation(prg,"u_f2"),chip:gl.getUniformLocation(prg,"u_chip"),mods:gl.getUniformLocation(prg,"u_mods")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,sN,dN,brkG,vinN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
+let aX,mG,fN,sN,dN,brkG,vinN,spcN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
 let currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,holdTime={},rotFly=0,freqs=[440,440];
 
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
+spcN=aX.createConvolver(); // Placeholder for SNES Gaussian Echo
 rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+2000)*x/(Math.PI+2000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+600)*x/(Math.PI+600*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 vinN=aX.createBiquadFilter();vinN.type='bandpass';vinN.frequency.value=1000;vinN.Q.value=30;vinN.connect(sN);
@@ -127,7 +141,7 @@ document.getElementById('overlay').style.display='none'}
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
-function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=h;hx_hud.style.color=h;hud.style.setProperty('--glow',h);}
+function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=h;hx_hud.style.color=h;hud.style.setProperty('--glow',h);curFreq=f;}
 
 function calcFreq(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
@@ -137,7 +151,8 @@ function calcFreq(v,a){
     if(mods.frac) b += (Math.random()-0.5)*800;
     if(currentChip==='Z80') b = Math.floor(b/32)*32;
     if(currentChip==='NES') b = Math.floor(b/8)*8;
-    if(currentChip==='SID') b *= (1.0 + Math.sin(aX.currentTime*50)*0.02); // SID Jitter
+    if(currentChip==='SID') b *= (1.0 + Math.sin(aX.currentTime*50)*0.02);
+    if(currentChip==='SPC') b *= (1.0 + Math.sin(aX.currentTime*5)*0.005); // SNES "Stable" vibrato
     return b;
 }
 
@@ -148,6 +163,7 @@ function setF(v,a,id,tc){
     if(currentChip==='Z80') v.osc.type='square';
     else if(currentChip==='NES') v.osc.type='triangle';
     else if(currentChip==='SID') v.osc.type='sawtooth';
+    else if(currentChip==='SPC') v.osc.type='sine';
     else v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');
     
     if(mods.theremin && tc > 1) b *= (1.0 + (tc-1)*0.01);
@@ -190,9 +206,12 @@ canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<
 function setChip(m,e){if(e)e.stopPropagation();setupEngine();currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));if(e.target)e.target.classList.add('active');gl.uniform1i(uL.chip, m==='Z80'?1:0);forceAll()}
 function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
+
 function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';if(m==='ghst')id='btnGhst';if(m==='broke')id='btnBroke';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);
 if(m==='broke'){brkG.gain.setTargetAtTime(mods.broke?1.1:0.7, aX.currentTime, 0.1); dN.delayTime.setTargetAtTime(mods.broke?0.2:0.08, aX.currentTime, 0.1);}
-if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?200:20000,aX.currentTime,.1);forceAll()}
+if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?200:20000,aX.currentTime,.1);
+gl.uniform4f(uL.mods, mods.bit?1:0, mods.gran?1:0, mods.broke?1:0, mods.wah?1:0);
+forceAll()}
 
 function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
