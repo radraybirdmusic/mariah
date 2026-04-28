@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.38 - SOUNDCHIP LOCK</title>
+<meta charset="UTF-8"><title>MARIAH v3.39 - CHIP ENGINE FIX</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -27,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.38<br>SOUNDCHIP ENGINE<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.39<br>SOUNDCHIP ENGINE FIX<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -123,7 +123,6 @@ function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
     if(mods.whir)b+=Math.sin(aX.currentTime*20)*400; if(mods.rots)b*=(0.7+Math.random()*0.6); if(mods.frac)b+=(Math.random()-0.5)*5000;
     
-    // SOUNDCHIP CORE ENGINES
     if(currentChip==='Z80'){ v.osc.type='square'; b=Math.floor(b/32)*32; }
     else if(currentChip==='NES'){ v.osc.type='triangle'; b=Math.floor(b/8)*8; }
     else if(currentChip==='SFC'){ v.osc.type='sine'; b*=(1.0+Math.sin(aX.currentTime*5)*0.005); }
@@ -142,7 +141,7 @@ function setF(v,a){
     let h=(a/360)*285/360; if(mods.fae)h=285-h; let c=hR(h,1,.5); rgb=c; 
     let hexS=rgbToHex(c); const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; let n=Math.round(12*Math.log2(b/440)+69);
     n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(b)}Hz`; hx_hud.innerText=hexS;
-    if(mods.fae){n_hud.style.color=hz_hud.style.color=hx_hud.style.color="#000";} else {n_hud.style.color=hz_hud.style.color=hx_hud.style.color=hexS;}
+    if(mods.fae){hx_hud.style.color=n_hud.style.color=hz_hud.style.color="#000";} else {hx_hud.style.color=n_hud.style.color=hexS;}
     
     gl.uniform1f(uL.f1,b); gl.uniform1i(uL.a,1);
     if(seq.rec && !v.sq){seq.banks[seq.bank][seq.step]={a:a,o:oct,c:hexS}; document.getElementById('bucket-'+seq.step).style.background=hexS;}
