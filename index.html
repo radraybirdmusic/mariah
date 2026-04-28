@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.23 - FINAL CONTRACT</title>
+<meta charset="UTF-8"><title>MARIAH v3.24 - FINAL LOCK</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -28,7 +28,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.23<br>FIXED HEX & REC<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.24<br>FINAL LOCK<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -134,8 +134,7 @@ function updateHUD(f,c){
     let n=Math.round(12*Math.log2(f/440)+69);
     n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(f)}Hz`; hx_hud.innerText=h;
     let tC = mods.fae ? '#000' : h;
-    hx_hud.style.color = tC + " !important"; 
-    n_hud.style.color=hz_hud.style.color=tC;
+    n_hud.style.color=hz_hud.style.color=hx_hud.style.color=tC;
     hud.style.setProperty('--glow',h);
 }
 
@@ -167,11 +166,14 @@ function syncVoice(v){ if(v && v.gain){ v.gain.disconnect();
     if(mods.ring){ if(!v.rO){v.rO=aX.createOscillator();v.rG=aX.createGain();v.rO.frequency.value=600;v.rO.connect(v.rG.gain);v.rO.start()} v.gain.connect(v.rG); v.rG.connect(d); }
 }}
 
-canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId,ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].gain.connect(mG);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); let colStr=setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); 
-/* REC FIX: CAPTURE DATA HERE */
-if(seq.rec){let h=(ang/360)*285/360;if(mods.fae)h=285-h;seq.banks[seq.bank][seq.step]={a:ang,o:oct,c:rgbToHex(hR(h,1,.5))}}}
+canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId,ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].gain.connect(mG);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); 
+/* HARD RECORD TRIGGER */
+if(seq.rec){let h=(ang/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);seq.banks[seq.bank][seq.step]={a:ang,o:oct,c:rgbToHex(c)}}};
 
-canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
+canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); 
+/* HARD MOVE RECORD */
+if(seq.rec){let h=(ang/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);seq.banks[seq.bank][seq.step]={a:ang,o:oct,c:rgbToHex(c)}}}};
+
 canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); if(vcs[id].d1){vcs[id].d1.stop();vcs[id].d2.stop()} delete vcs[id]; } if(Object.keys(vcs).length===0)gl.uniform1i(uL.a,0); };
 
 function toggleMod(m,e){e.preventDefault(); mods[m]=!mods[m]; e.target.classList.toggle('active',mods[m]);
