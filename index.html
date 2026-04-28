@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.89 - VISUAL RESTORE</title>
+<meta charset="UTF-8"><title>MARIAH v2.90 - INSTANT SUBLIMATION</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -29,7 +29,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.89<br>VISUALS RESTORED<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.90<br>INSTANT SUBLIMATION<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -80,9 +80,9 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
             <button id="btnFae" class="btn" onclick="toggleFae(event)">FAE</button>
         </div>
         <div class="row">
-            <button class="btn ham" onclick="shiftOct(0.75)">HAM DOWN</button>
+            <button class="btn ham" onclick="shiftOct(0.75, event)">HAM DOWN</button>
             <div style="width:82px"></div>
-            <button class="btn ham" onclick="shiftOct(1.33)">HAM UP</button>
+            <button class="btn ham" onclick="shiftOct(1.33, event)">HAM UP</button>
         </div>
     </div>
 </div>
@@ -133,12 +133,12 @@ function setF(v,a){
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
     if(mods.ghst){if(!v.wr){v.wr=aX.createOscillator();v.wrG=aX.createGain();v.wr.connect(v.wrG);v.wrG.connect(mG);v.wr.start()} v.wr.frequency.setTargetAtTime(b*2,aX.currentTime,0.1);v.wrG.gain.setTargetAtTime(0.3,aX.currentTime,0.1)}
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
-    gl.uniform1f(uL.f1, b); gl.uniform1i(uL.a, 1);
+    gl.uniform1f(uL.f1, b);
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 
 function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
 
-function syncVoice(id){ if(vcs[id]){vcs[id].gain.disconnect(); let dest = mods.rock?rockG:(mods.bit?bitG:mG); vcs[id].gain.connect(dest);}}
+function syncVoice(v){ if(v && v.gain){v.gain.disconnect(); let dest = mods.rock?rockG:(mods.bit?bitG:mG); v.gain.connect(dest);}}
 
 function handleTouch(e){
     setupEngine();
@@ -146,8 +146,8 @@ function handleTouch(e){
     for(let i=0;i<lt;i++){
         let t=ts[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;
         if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()}
-        vcs[id].lastAng = ang; syncVoice(id); let c=setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
-        if(seq.rec) seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};
+        vcs[id].lastAng = ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
+        if(seq.rec) {let c=setF(vcs[id],ang); seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};}
     }
 }
 
@@ -158,25 +158,25 @@ canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<
     if(vcs[id].wrG) vcs[id].wrG.gain.setTargetAtTime(0,aX.currentTime,0.1);
 }}if(!e.touches.length){lt=0; gl.uniform1i(uL.a, 0);}});
 
-function setChip(m,e){currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');gl.uniform1i(uL.ch, m==='NES'?1:0)}
-function setBank(i,e){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');rB()}
+function setChip(m,e){e.stopPropagation(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); gl.uniform1i(uL.ch, m==='NES'?1:0)}
+function setBank(i,e){e.stopPropagation(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-function toggleMod(m,e){mods[m]=!mods[m];e.target.classList.toggle('active',mods[m]);
+function toggleMod(m,e){e.stopPropagation(); mods[m]=!mods[m]; e.target.classList.toggle('active',mods[m]);
 gl.uniform4f(uL.m1, mods.whir?1:0, mods.rots?1:0, mods.frac?1:0, mods.ghst?1:0);
 gl.uniform4f(uL.m2, mods.sat?1:0, mods.gran?1:0, mods.broke?1:0, mods.bit?1:0);
 gl.uniform4f(uL.m3, mods.wind?1:0, mods.ring?1:0, mods.vin?1:0, mods.spring?1:0);
 gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1:0);
-for(let id in vcs) if(vcs[id].osc) { syncVoice(id); setF(vcs[id], vcs[id].lastAng); }}
+for(let id in vcs) if(vcs[id].osc) { syncVoice(vcs[id]); setF(vcs[id], vcs[id].lastAng); }}
 function stopAll(){seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
-function toggleSeq(m,e){if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;e.target.classList.toggle('active')}
-function toggleAllPlay(e){seq.all=!seq.all;e.target.classList.toggle('active')}
-function toggleFae(e){mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);e.target.classList.toggle('active');gl.uniform1i(uL.f, mods.fae);rB()}
-function shiftOct(m){oct*=m; for(let id in vcs) if(vcs[id].osc) setF(vcs[id], vcs[id].lastAng);}
+function toggleSeq(m,e){e.stopPropagation(); if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;e.target.classList.toggle('active')}
+function toggleAllPlay(e){e.stopPropagation(); seq.all=!seq.all;e.target.classList.toggle('active')}
+function toggleFae(e){e.stopPropagation(); mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);e.target.classList.toggle('active');gl.uniform1i(uL.f, mods.fae);rB(); for(let id in vcs) if(vcs[id].osc) setF(vcs[id], vcs[id].lastAng);}
+function shiftOct(m,e){if(e)e.stopPropagation(); oct*=m; for(let id in vcs) if(vcs[id].osc) setF(vcs[id], vcs[id].lastAng);}
 
 setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
-if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain()};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].gain.connect(mods.rock?rockG:mG);vcs['seq'].osc.start()}let oldO=oct;oct=d.o;setF(vcs['seq'],d.a);oct=oldO;vcs['seq'].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.02);ab.style.background=d.c}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
+if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain()};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].osc.start()}let oldO=oct;oct=d.o;setF(vcs['seq'],d.a);oct=oldO;vcs['seq'].gain.disconnect();vcs['seq'].gain.connect(mods.rock?rockG:mG);vcs['seq'].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.02);ab.style.background=d.c}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
 seq.step++;if(seq.step>=64){seq.step=0;if(seq.all&&seq.play){seq.bank=(seq.bank+1)%4;rB()}}},125);
-function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
+function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.uniform1i(uL.a,seq.play||lt);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
 requestAnimationFrame(render);
 </script>
 </body>
