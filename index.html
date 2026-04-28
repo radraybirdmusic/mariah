@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.15 - THEREMIN DUAL</title>
+<meta charset="UTF-8"><title>MARIAH v3.17 - THEREMIN LOCK</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -27,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.15<br>THEREMIN DUAL-BAR<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.17<br>THEREMIN FIX<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -96,7 +96,7 @@ void main(){
     vec2 p = uv - 0.5;
     if(u_f == 1) p.x = -p.x;
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
-    if(u_m4.z>0.5) s += (sin(uv.x*5.0 + u_t)*0.5); // THEREMIN BEAM
+    if(u_m4.z>0.5) s += (sin(uv.x*8.0 + u_t)*0.6); // THEREMIN BEAM
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     vec3 col = u_f==1?(1.0-u_c):u_c;
     gl_FragColor = vec4(col*l, 1.0);
@@ -120,8 +120,9 @@ let tC=mods.fae?'#000':h; hz_hud.style.color=hx_hud.style.color=tC; hud.style.se
 
 function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
-    if(mods.theremin){ let keys=Object.keys(vcs); if(keys.length>1){ let d=Math.abs(vcs[keys[0]].lastAng - vcs[keys[1]].lastAng); b *= (d/180); } }
-    v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.1);
+    /* THEREMIN RELATIONSHIP LOGIC */
+    if(mods.theremin){ let keys=Object.keys(vcs); if(keys.length>1){ let d=Math.abs(vcs[keys[0]].lastAng - vcs[keys[1]].lastAng); b *= (d/120); } }
+    v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.15);
     let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);rgb=c;updateHUD(b,c);
     gl.uniform1f(uL.f1, b); gl.uniform1i(uL.a, 1);
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
@@ -140,8 +141,8 @@ gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1
 for(let id in vcs) setF(vcs[id], vcs[id].lastAng); }
 
 function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae); for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
-function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
-requestAnimationFrame(render);
+function render(t){ gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight); gl.uniform1f(uL.t,t*.001); gl.uniform2f(uL.r,canvas.width,canvas.height); gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]); gl.drawArrays(gl.TRIANGLES,0,6); requestAnimationFrame(render); }
+render(0);
 </script>
 </body>
 </html>
