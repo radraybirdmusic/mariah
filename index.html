@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.02 - VERBATIM REPAIR</title>
+<meta charset="UTF-8"><title>MARIAH v3.03 - RESTORED</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -28,7 +28,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v3.02<br>VERBATIM REPAIR<br>TAP TO START</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v3.03<br>RESTORED STABLE<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -86,8 +86,8 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
     </div>
 </div>
 <script>
-const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),hud=document.getElementById('hud'),n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
-for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;document.getElementById('bucket-grid').appendChild(b)}
+const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),grid=document.getElementById('bucket-grid'),hud=document.getElementById('hud'),n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
+for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
 const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
 uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
 uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform float u_f1;
@@ -97,7 +97,7 @@ void main(){
     vec2 p = uv - 0.5;
     if(u_f == 1) p.x = -p.x;
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
-    if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*60.0 + u_t*15.0))-0.5)*0.6; 
+    if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*60.0 + u_t*15.0))-0.5)*0.6; // VIN SWISH
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     vec3 col = u_f==1?(1.0-u_c):u_c;
     gl_FragColor = vec4(col*l, 1.0);
@@ -124,9 +124,9 @@ function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.
 function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
-    /* VIN RADIOACTIVE SWISH: CRASHING ROCKS */
-    if(mods.vin) v.osc.frequency.setTargetAtTime(b + (Math.sin(aX.currentTime*30)*300 * Math.sin(aX.currentTime*5)), aX.currentTime, 0.05); 
-    let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
+    /* VIN SWISH RADIO */
+    if(mods.vin) v.osc.frequency.setTargetAtTime(b + (Math.sin(aX.currentTime*40)*250 * Math.sin(aX.currentTime*6)), aX.currentTime, 0.05); 
+    let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);rgb=c;updateHUD(b,c);
     gl.uniform1f(uL.f1, b); gl.uniform1i(uL.a, 1);
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 
