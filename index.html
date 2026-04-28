@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.33 - INVERSION FIX</title>
+<meta charset="UTF-8"><title>MARIAH v3.34 - HARDCORE LOCK</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -28,16 +28,16 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.33<br>INVERSION FIXED<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.34<br>HARDCORE REPAIR<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
-    <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
+    <div id="hud"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
     <div id="chip-row">
         <button id="btnUser" class="btn chip active" onpointerdown="setChip('USER', event)">USER</button>
         <button id="btnNes" class="btn chip" onpointerdown="setChip('NES', event)">NES</button>
         <button id="btnSfc" class="btn chip" onpointerdown="setChip('SFC', event)">SFC</button>
         <button id="btnPaula" class="btn chip" onpointerdown="setChip('PAULA', event)">PAULA</button>
-        <button id="btnSid" class="btn chip" onpointerdown="setChip('SID', event)">SID</button>
+        <button id="btnSpc" class="btn chip" onpointerdown="setChip('SID', event)">SID</button>
         <button id="btnZ80" class="btn chip" onpointerdown="setChip('Z80', event)">Z80</button>
     </div>
     <div id="bank-row">
@@ -99,7 +99,6 @@ void main(){
     if(u_m4.x>0.5)s=sign(s)*(0.1+abs(sin(uv.y*600.+u_t*40.))*0.7); if(u_m3.y>0.5)s*=step(0.9,fract(uv.y*20.+u_t*10.));
     if(u_m3.w>0.5)s=mix(s,sin(u_t*80.+uv.y*100.),0.5); if(u_m4.y>0.5)s+=(sin(uv.x*100.+u_t*20.)*0.2);
     if(u_m4.w>0.5)s=tan(uv.y*2.+s*5.+u_t); float l=smoothstep(0.15,0.0,abs(p.x+s*0.2));
-    // SHADER INVERSION FIX
     vec3 col = u_f == 1 ? (1.0 - u_c) : u_c;
     gl_FragColor=vec4(col*l,1.0);
     if(u_f == 1) gl_FragColor = vec4(1.0 - (1.0 - col)*l, 1.0);
@@ -133,9 +132,10 @@ function setF(v,a){
     v.osc.frequency.setTargetAtTime(b,aX.currentTime,0.02);
     let h=(a/360)*285/360; if(mods.fae)h=285-h; let c=hR(h,1,.5); rgb=c; 
     
+    // HARDWARE HUD UPDATE
     let hexS=rgbToHex(c); const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; let n=Math.round(12*Math.log2(b/440)+69);
     n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(b)}Hz`; hx_hud.innerText=hexS;
-    if(mods.fae){hx_hud.style.color=n_hud.style.color=hz_hud.style.color="#000";} else {hx_hud.style.color=n_hud.style.color=hexS;}
+    if(mods.fae){n_hud.style.color=hz_hud.style.color=hx_hud.style.color="#000";} else {n_hud.style.color=hz_hud.style.color=hx_hud.style.color=hexS;}
     
     gl.uniform1f(uL.f1,b); gl.uniform1i(uL.a,1);
     if(seq.rec && !v.sq){seq.banks[seq.bank][seq.step]={a:a,o:oct,c:hexS}; document.getElementById('bucket-'+seq.step).style.background=hexS;}
@@ -155,7 +155,7 @@ canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.p
     vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
 };
 canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
-canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); if(vcs[id].d1){vcs[id].d1.stop();vcs[id].d2.stop()} delete vcs[id]; } if(Object.keys(vcs).length===0)gl.uniform1i(uL.a,0); };
+canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); if(vcs[id].d1){vcs[id].d1.stop();vcs[id].d2.stop()} delete vcs[id]; } if(Object.keys(vcs).length===0 && !seq.play)gl.uniform1i(uL.a,0); };
 
 function toggleMod(m,e){e.preventDefault(); mods[m]=!mods[m]; e.target.classList.toggle('active',mods[m]);
     gl.uniform4f(uL.m1,mods.whir?1:0,mods.rots?1:0,mods.frac?1:0,mods.ghst?1:0); gl.uniform4f(uL.m2,mods.sat?1:0,mods.gran?1:0,mods.broke?1:0,mods.bit?1:0);
@@ -163,7 +163,7 @@ function toggleMod(m,e){e.preventDefault(); mods[m]=!mods[m]; e.target.classList
     for(let id in vcs){syncVoice(vcs[id]); setF(vcs[id],vcs[id].lastAng);}
 }
 function stopAll(e){e.preventDefault(); seq.play=seq.rec=0; vcs={}; document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'))}
-function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae); for(let id in vcs) setF(vcs[id], vcs[id].lastAng); rB();}
+function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae?1:0); for(let id in vcs) setF(vcs[id], vcs[id].lastAng); rB();}
 function shiftOct(v,e){e.preventDefault(); oct+=v; for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
 function setChip(m,e){e.preventDefault(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
 function setBank(i,e){e.preventDefault(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); document.getElementById('bank'+i).classList.add('active'); rB()}
