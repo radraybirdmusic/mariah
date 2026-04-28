@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.08 - SAFETY & RESTORE</title>
+<meta charset="UTF-8"><title>MARIAH v3.09 - GHOST HAND</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -27,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.08<br>SAFETY & RESTORE<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.09<br>GHOST HAND RESTORE<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -98,10 +98,11 @@ void main(){
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
     if(u_m1.y>0.5) s += cos(uv.y*150.0 + u_t*15.0)*0.2; 
     if(u_m1.z>0.5) s += (fract(uv.y*30.0 + u_t*5.0)-0.5)*0.6;
-    if(u_m1.w>0.5) s = mix(s, tan(uv.y*5.0 + u_t*8.0), 0.7); 
+    if(u_m1.w>0.5) s = mix(s, tan(uv.y*20.0 + u_t*10.0), 0.8); // GHOST HAND VISUAL (AGGRESSIVE)
     if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*60.0 + u_t*15.0))-0.5)*0.6; 
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     vec3 col = u_f==1?(1.0-u_c):u_c;
+    if(u_m1.w>0.5) col += vec3(0.4, 0.3, 0.1); // ADDITIVE GHOST GLOW
     gl_FragColor = vec4(col*l, 1.0);
     if(u_f==1) gl_FragColor = vec4(1.0-(1.0-col)*l, 1.0);
 }`;
@@ -125,7 +126,11 @@ function setF(v,a){
     if(mods.whir) b+=Math.sin(aX.currentTime*20)*400;
     if(mods.rots) b *= (0.7 + Math.random()*0.6);
     if(mods.frac) b += (Math.random()-0.5)*5000;
-    if(mods.ghst) b *= (1.0 + Math.sin(aX.currentTime*12)*0.4);
+    /* GHOST HAND: ADDITIVE STACKING LOGIC */
+    if(mods.ghst){ 
+        let noteCount = Object.keys(vcs).length;
+        b *= (1.0 + Math.sin(aX.currentTime*(15 + noteCount*5))* (0.4 + noteCount*0.2));
+    }
     if(mods.vin) b += (Math.sin(aX.currentTime * 45) * 400 * Math.sin(aX.currentTime * 7));
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
     let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
@@ -136,7 +141,7 @@ function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if
 
 function syncVoice(v){ if(v && v.gain){v.gain.disconnect(); if(mods.broke){v.gain.connect(dN)}else{v.gain.connect(mG)}}}
 
-canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId; let ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); };
+canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId,ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); };
 canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
 canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); delete vcs[id]; } if(Object.keys(vcs).length===0)gl.uniform1i(uL.a,0); };
 
