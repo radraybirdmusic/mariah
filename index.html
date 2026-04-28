@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.62 - METAL CUBE</title>
+<meta charset="UTF-8"><title>MARIAH v2.63 - ROTS</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -24,7 +24,6 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .btn.active{background:#0f0!important;color:#000!important;box-shadow:0 0 15px #0f0}
 .btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
 .btn.broke{border-color:#f00;color:#f00}.btn.broke.active{background:#f00!important;color:#fff!important;animation:pulse 0.1s infinite;}
-.btn.vin{border-color:#0ff;color:#0ff}
 .btn.ham{border-color:#fff;color:#fff;min-width:120px}
 .spacer{width:82px;}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
@@ -33,7 +32,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.62<br>METAL CUBE & LEMON DEMON<br>TAP TO INITIALIZE</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.63<br>ROTTING CHURN & MADNESS<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0">READY</div>
@@ -71,7 +70,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
         <div class="row">
             <button id="btnWind" class="btn" ontouchstart="toggleMod('wind', event)">WIND</button>
             <button id="btnRing" class="btn" ontouchstart="toggleMod('ring', event)">RING</button>
-            <button id="btnVin" class="btn vin" ontouchstart="toggleMod('vin', event)">VIN</button>
+            <button id="btnVin" class="btn vin" ontouchstart="toggleMod('vin', event)" style="color:#0ff;border-color:#0ff">VIN</button>
             <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring', event)">SPR</button>
         </div>
         <div class="row">
@@ -100,44 +99,47 @@ const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
 let aX,mG,fN,sN,dN,brkG,vinN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
-let currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,holdTime={};
+let currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,holdTime={},rotFly=0;
 
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
-rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+1000)*x/(Math.PI+1000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
-sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x))}sN.curve=c;sN.connect(rockN);
+rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+1500)*x/(Math.PI+1500*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
+sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+600)*x/(Math.PI+600*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 vinN=aX.createBiquadFilter();vinN.type='bandpass';vinN.frequency.value=1000;vinN.Q.value=15;vinN.connect(sN);
 bitN=aX.createGain();bitN.connect(vinN);
-dN=aX.createDelay(1.);dN.delayTime.value=0.05;let dFB=aX.createGain();dFB.gain.value=0.66;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
-brkG=aX.createGain();brkG.gain.value=0;let bFB=aX.createGain();bFB.gain.value=1.8;dN.connect(bFB);bFB.connect(dN);
+dN=aX.createDelay(1.);dN.delayTime.value=0.08;
+brkG=aX.createGain();brkG.gain.value=0.7;dN.connect(brkG);brkG.connect(dN);dN.connect(bitN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
+function updateHUD(f,c){let h=rgbToHex(c);hud.innerText=`${getNoteName(f)} | ${Math.round(f)}Hz | ${h}`;hud.style.color=h;hud.style.setProperty('--glow',h)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
-function updateHUD(f,c){if(mods.broke){hud.innerText="LEMON DEMON ACTIVE";hud.style.color="#f00";hud.style.setProperty('--glow','#f00');return;}let h=rgbToHex(c);hud.innerText=`${getNoteName(f)} | ${Math.round(f)}Hz | ${h}`;hud.style.color=h;hud.style.setProperty('--glow',h)}
 
 function calcFreq(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
-    if(mods.spring) b += (Math.sin(aX.currentTime*20)*150);
-    if(mods.whir) b += Math.sin(aX.currentTime*18)*180;
-    if(mods.rots) b *= (1.0 + Math.sin(aX.currentTime*12)*0.6);
-    if(mods.frac) b += (Math.random()-0.5)*500;
-    if(currentChip==='Z80') b = Math.floor(b/32)*32;
+    if(mods.spring) b += (Math.sin(aX.currentTime*25)*180);
+    if(mods.whir) b += Math.sin(aX.currentTime*18)*200;
+    if(mods.rots) b += rotFly; // The Rotten Fly Slap
+    if(mods.frac) b += (Math.random()-0.5)*700;
+    if(currentChip==='Z80' || currentChip==='NES') b = Math.floor(b/32)*32;
     return b;
 }
+
+// Rotting Meat Churn Interval
+setInterval(() => { if(mods.rots) rotFly = (Math.random() - 0.5) * 400; else rotFly = 0; }, 150);
 
 function setF(v,a,id){
     let b=calcFreq(v,a);
     v.osc.type=(currentChip==='Z80' || currentChip==='NES')?'square':(mods.theremin?'sine':(mods.fae?'triangle':'sawtooth'));
     v.osc.frequency.setValueAtTime(b,aX.currentTime);
-    v.lfoG.gain.setTargetAtTime(mods.wind?90:0,aX.currentTime,.05);
+    v.lfoG.gain.setTargetAtTime(mods.wind?100:0,aX.currentTime,.05);
     v.last=a;
-    if(mods.vin) vinN.frequency.setValueAtTime(1000 + Math.sin(aX.currentTime*5)*800, aX.currentTime);
+    if(mods.vin) vinN.frequency.setValueAtTime(800 + Math.sin(aX.currentTime*4)*1200, aX.currentTime);
     if(mods.wah && id && holdTime[id]){
         let el = (Date.now() - holdTime[id])/1000;
-        fN.frequency.setValueAtTime(Math.min(20000, 400 + el*2000), aX.currentTime);
-        fN.Q.setValueAtTime(1 + el*10, aX.currentTime);
+        fN.frequency.setValueAtTime(Math.min(20000, 300 + el*3000), aX.currentTime);
+        fN.Q.setValueAtTime(1 + el*15, aX.currentTime);
     }
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
@@ -159,7 +161,9 @@ function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelector
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
 
 function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';if(m==='ghst')id='btnGhst';if(m==='broke')id='btnBroke';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);
-if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?400:20000,aX.currentTime,.1);forceAll()}
+if(m==='broke'){brkG.gain.setTargetAtTime(mods.broke?1.05:0.7, aX.currentTime, 0.1); dN.delayTime.setTargetAtTime(mods.broke?0.15:0.08, aX.currentTime, 0.1);}
+if(m==='gran'){dN.delayTime.setTargetAtTime(mods.gran?0.05:0.08, aX.currentTime, 0.1);}
+if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?300:20000,aX.currentTime,.1);forceAll()}
 
 function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
