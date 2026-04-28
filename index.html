@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.30 - HUD & VISUAL LOCK</title>
+<meta charset="UTF-8"><title>MARIAH v3.31 - VISIBILITY RECOVERY</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -28,7 +28,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.30<br>HUD & VISUAL LOCK<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.31<br>VISIBILITY RECOVERY<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -98,8 +98,12 @@ void main(){
     if(u_m2.y>0.5)s*=(0.5+step(0.9,fract(uv.y*15.+u_t*20.))*2.); if(u_m2.w>0.5)s=floor(s*3.)/3.;
     if(u_m4.x>0.5)s=sign(s)*(0.1+abs(sin(uv.y*600.+u_t*40.))*0.7); if(u_m3.y>0.5)s*=step(0.9,fract(uv.y*20.+u_t*10.));
     if(u_m3.w>0.5)s=mix(s,sin(u_t*80.+uv.y*100.),0.5); if(u_m4.y>0.5)s+=(sin(uv.x*100.+u_t*20.)*0.2);
-    if(u_m4.w>0.5)s=tan(uv.y*2.+s*5.+u_t); float l=smoothstep(0.25,0.0,abs(p.x+s*0.2));
-    vec3 col=u_f==1?(1.0-u_c):u_c; if(u_m4.w>0.5)col=(u_f==1)?vec3(0.1,0.4,0.4):vec3(0.4,0.,0.);
+    if(u_m4.w>0.5)s=tan(uv.y*2.+s*5.+u_t); 
+    // FAE VISIBILITY FIX
+    float thickness = (u_f==1)?0.35:0.15;
+    float l=smoothstep(thickness,0.0,abs(p.x+s*0.2));
+    vec3 col=u_f==1?(1.0-u_c):u_c; 
+    if(u_m4.w>0.5)col=(u_f==1)?vec3(0.0,0.5,0.5):vec3(0.4,0.,0.);
     gl_FragColor=vec4(col*l,1.0); if(u_f==1)gl_FragColor=vec4(1.0-(1.0-col)*l,1.0);
 }`;
 const prg=gl.createProgram();
@@ -121,8 +125,9 @@ function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');r
 function updateHUD(f,c){
     let h=rgbToHex(c); const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     let n=Math.round(12*Math.log2(f/440)+69);
-    n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(f)}Hz`; hx_hud.innerText=h;
-    let tC=mods.fae?'#000':h; hx_hud.style.color=n_hud.style.color=hz_hud.style.color=tC;
+    n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(f)}Hz`; 
+    hx_hud.innerText=h; hx_hud.style.color=mods.fae?'#000':h;
+    n_hud.style.color=hz_hud.style.color=mods.fae?'#000':h;
 }
 
 function setF(v,a){
