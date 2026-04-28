@@ -1,33 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.18 - THE LINE IN THE SAND</title>
+<meta charset="UTF-8"><title>MARIAH v3.19 - 4AM LOCK</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
-canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
+canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1;pointer-events:auto}
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
 #hud{display:flex;justify-content:space-between;padding:0 20px;width:calc(100% - 40px);font-size:5vw;font-weight:900;margin-top:60px;height:60px;pointer-events:none}
 .neon-glow{text-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);}
-#chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;pointer-events:auto;flex-wrap:wrap;max-width:98%;}
-.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:6px 2px;font-size:9px;min-width:52px;border-radius:4px;cursor:pointer;pointer-events:auto}
+#chip-row, #bank-row, #bucket-grid, #controls{pointer-events:auto}
+#chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;flex-wrap:wrap;max-width:98%;}
+.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:6px 2px;font-size:9px;min-width:52px;border-radius:4px;cursor:pointer}
 .btn.chip.active{background:#0cf!important;color:#000!important}
-#bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
-.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:8px 14px;border-radius:4px;cursor:pointer;pointer-events:auto}
+#bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:8px 14px;border-radius:4px;cursor:pointer}
 .btn.bank.active{background:#fff!important;color:#000!important}
-#bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
+#bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto}
 .bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808;}
 .bucket.playhead{border:3px solid #f0f !important;box-shadow:0 0 15px #f0f;z-index:10;}
-#controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
-.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
-.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto;touch-action:manipulation;z-index:10001;position:relative;}
+#controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
+.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;touch-action:manipulation;z-index:10001;position:relative;}
 .btn.active{background:#0f0!important;color:#000!important;box-shadow: 0 0 15px #0f0;}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
-#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center}
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.18<br>THE LINE IN THE SAND<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.19<br>POINTER & HUD LOCK<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -78,9 +79,9 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
             <button id="btnFae" class="btn" onpointerdown="toggleFae(event)">FAE</button>
         </div>
         <div class="row">
-            <button class="btn ham" onpointerdown="shiftOct(0.75, event)">HAM DOWN</button>
+            <button class="btn ham" onpointerdown="shiftOct(-0.3, event)">HAM DOWN</button>
             <div style="width:82px"></div>
-            <button class="btn ham" onpointerdown="shiftOct(1.33, event)">HAM UP</button>
+            <button class="btn ham" onpointerdown="shiftOct(0.3, event)">HAM UP</button>
         </div>
     </div>
 </div>
@@ -104,7 +105,6 @@ void main(){
     if(u_m3.y>0.5) s *= step(0.9, fract(uv.y*20.0 + u_t*10.0)); 
     if(u_m3.w>0.5) s = mix(s, sin(u_t*80.0 + uv.y*100.0), 0.5); 
     if(u_m4.y>0.5) s += (sin(uv.x*100.0 + u_t*20.0)*0.2); 
-    if(u_m4.z>0.5) s += (sin(uv.x*8.0 + u_t)*0.6); // THEREMIN BEAM
     if(u_m4.w>0.5) s = tan(uv.y*2.0 + s*5.0 + u_t); 
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     vec3 col = u_f==1?(1.0-u_c):u_c;
@@ -119,7 +119,7 @@ const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,dN,rockG,satG,doomG,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
+let aX,mG,fN,dN,rockG,satG,doomG,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',rgb=[0,1,0.5],oct=1.0;
 
 function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.connect(mG);
 rockG=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++)rC[i]=Math.sign(i/22050-1)*0.7;rockG.curve=rC;rockG.connect(mG);
@@ -129,8 +129,13 @@ dN=aX.createDelay(1.);dN.delayTime.value=0.15;let dFB=aX.createGain();dFB.gain.v
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
-function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;
-hx_hud.style.color = mods.fae ? '#000' : h; n_hud.style.color=hz_hud.style.color=mods.fae?'#000':h; hud.style.setProperty('--glow',h)}
+
+function updateHUD(f,c){
+    let h=rgbToHex(c); n_hud.innerText=getNoteName(f); hz_hud.innerText=`${Math.round(f)}Hz`; hx_hud.innerText=h;
+    let tC = mods.fae ? '#000' : h;
+    n_hud.style.color=hz_hud.style.color=hx_hud.style.color=tC;
+    hud.style.setProperty('--glow',h);
+}
 
 function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
@@ -143,7 +148,6 @@ function setF(v,a){
     if(mods.wind) b *= (Math.sin(aX.currentTime*20)>0?1.5:0.2);
     if(mods.spring) b += Math.sin(aX.currentTime*80)*800;
     if(mods.ebow){ let n=Object.keys(vcs).length; b *= (1.2 + Math.sin(aX.currentTime*50)*0.5 * n); }
-    if(mods.theremin){ let keys=Object.keys(vcs); if(keys.length>1){ let d=Math.abs(vcs[keys[0]].lastAng - vcs[keys[1]].lastAng); b *= (d/120); } }
     if(mods.doom){ if(!v.d1){v.d1=aX.createOscillator();v.d2=aX.createOscillator();v.d1.connect(v.gain);v.d2.connect(v.gain);v.d1.start();v.d2.start()} v.d1.frequency.value=b*0.5;v.d2.frequency.value=b*1.5; b *= (1.0 - Math.min(1.0, aX.currentTime % 2.0)*0.5);}
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
     let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);rgb=c;updateHUD(b,c);
@@ -173,7 +177,7 @@ for(let id in vcs) { syncVoice(vcs[id]); setF(vcs[id], vcs[id].lastAng); }}
 
 function stopAll(e){e.preventDefault(); vcs={}; document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'))}
 function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae); for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
-function shiftOct(m,e){e.preventDefault(); oct*=m; for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
+function shiftOct(v,e){e.preventDefault(); oct += v; for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
 function setChip(m,e){e.preventDefault(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
 function setBank(i,e){e.preventDefault(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
 
