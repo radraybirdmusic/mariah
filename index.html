@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.81</title>
+<meta charset="UTF-8"><title>MARIAH v2.83 - CLEAN SIGNAL</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -23,66 +23,66 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto}
 .btn.active{background:#0f0!important;color:#000!important}
-.btn.doom{border-color:#f00;color:#f00}
+.btn.doom{border-color:#f00;color:#f00}.btn.doom.active{background:#f00!important;color:#000!important}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.81<br>HARD RECOVERY<br>TAP TO START</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.83<br>CLEAN SIGNAL<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
     <div id="chip-row">
-        <button id="btnUser" class="btn chip active" onclick="setChip('USER', event)">USER</button>
-        <button id="btnNes" class="btn chip" onclick="setChip('NES', event)">NES</button>
-        <button id="btnSfc" class="btn chip" onclick="setChip('SFC', event)">SFC</button>
-        <button id="btnPaula" class="btn chip" onclick="setChip('PAULA', event)">PAULA</button>
-        <button id="btnSid" class="btn chip" onclick="setChip('SID', event)">SID</button>
-        <button id="btnZ80" class="btn chip" onclick="setChip('Z80', event)">Z80</button>
+        <button id="btnUser" class="btn chip active" ontouchstart="setChip('USER', event)">USER</button>
+        <button id="btnNes" class="btn chip" ontouchstart="setChip('NES', event)">NES</button>
+        <button id="btnSfc" class="btn chip" ontouchstart="setChip('SFC', event)">SFC</button>
+        <button id="btnPaula" class="btn chip" ontouchstart="setChip('PAULA', event)">PAULA</button>
+        <button id="btnSid" class="btn chip" ontouchstart="setChip('SID', event)">SID</button>
+        <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80', event)">Z80</button>
     </div>
     <div id="bank-row">
-        <button id="bank0" class="btn bank active" onclick="setBank(0, event)">P1</button>
-        <button id="bank1" class="btn bank" onclick="setBank(1, event)">P2</button>
-        <button id="bank2" class="btn bank" onclick="setBank(2, event)">P3</button>
-        <button id="bank3" class="btn bank" onclick="setBank(3, event)">P4</button>
-        <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" onclick="toggleAllPlay(event)">ALL</button>
+        <button id="bank0" class="btn bank active" ontouchstart="setBank(0, event)">P1</button>
+        <button id="bank1" class="btn bank" ontouchstart="setBank(1, event)">P2</button>
+        <button id="bank2" class="btn bank" ontouchstart="setBank(2, event)">P3</button>
+        <button id="bank3" class="btn bank" ontouchstart="setBank(3, event)">P4</button>
+        <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" ontouchstart="toggleAllPlay(event)">ALL</button>
     </div>
     <div id="bucket-grid"></div>
     <div id="controls">
-        <button class="btn kill" onclick="window.location.reload()">!! NUCLEAR RESET !!</button>
+        <button class="btn kill" ontouchstart="window.location.reload()">!! NUCLEAR RESET !!</button>
         <div class="row">
-            <button id="btnWhir" class="btn" onclick="toggleMod('whir', event)">WHIR</button>
-            <button id="btnRots" class="btn" onclick="toggleMod('rots', event)">ROTS</button>
-            <button id="btnFrac" class="btn" onclick="toggleMod('frac', event)">FRAC</button>
-            <button id="btnGhst" class="btn" onclick="toggleMod('ghst', event)">GHOST</button>
+            <button id="btnWhir" class="btn active" ontouchstart="toggleMod('whir', event)">WHIR</button>
+            <button id="btnRots" class="btn" ontouchstart="toggleMod('rots', event)">ROTS</button>
+            <button id="btnFrac" class="btn" ontouchstart="toggleMod('frac', event)">FRAC</button>
+            <button id="btnGhst" class="btn" ontouchstart="toggleMod('ghst', event)">GHOST</button>
         </div>
         <div class="row">
-            <button id="btnSat" class="btn fx" onclick="toggleMod('sat', event)">SAT</button>
-            <button id="btnGran" class="btn fx" onclick="toggleMod('gran', event)">GRAN</button>
-            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" onclick="toggleMod('broke', event)">BROKE</button>
-            <button id="btnBit" class="btn" onclick="toggleMod('bit', event)">BIT</button>
-            <button id="btnRock" class="btn" onclick="toggleMod('rock', event)">ROCK</button>
+            <button id="btnSat" class="btn" ontouchstart="toggleMod('sat', event)">SAT</button>
+            <button id="btnGran" class="btn" ontouchstart="toggleMod('gran', event)">GRAN</button>
+            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleMod('broke', event)">BROKE</button>
+            <button id="btnBit" class="btn" ontouchstart="toggleMod('bit', event)">BIT</button>
+            <button id="btnRock" class="btn" ontouchstart="toggleMod('rock', event)">ROCK</button>
         </div>
         <div class="row">
-            <button id="btnWind" class="btn" onclick="toggleMod('wind', event)">WIND</button>
-            <button id="btnRing" class="btn" onclick="toggleMod('ring', event)">RING</button>
-            <button id="btnVin" class="btn" style="color:#0ff;border-color:#0ff" onclick="toggleMod('vin', event)">VIN</button>
-            <button id="btnSpring" class="btn" onclick="toggleMod('spring', event)">SPR</button>
-            <button id="btnDoom" class="btn doom" onclick="toggleMod('doom', event)">DOOM</button>
+            <button id="btnWind" class="btn" ontouchstart="toggleMod('wind', event)">WIND</button>
+            <button id="btnRing" class="btn" ontouchstart="toggleMod('ring', event)">RING</button>
+            <button id="btnVin" class="btn" ontouchstart="toggleMod('vin', event)" style="color:#0ff;border-color:#0ff">VIN</button>
+            <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring', event)">SPR</button>
+            <button id="btnDoom" class="btn doom" ontouchstart="toggleMod('doom', event)">DOOM</button>
         </div>
         <div class="row">
-            <button id="btnEbow" class="btn" onclick="toggleMod('ebow', event)">EBOW</button>
-            <button id="btnTherm" class="btn" onclick="toggleMod('theremin', event)">THERM</button>
-            <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec', event)">REC</button>
-            <button id="btnPlay" class="btn" onclick="toggleSeq('play', event)">PLAY</button>
-            <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
-            <button id="btnFae" class="btn" onclick="toggleFae(event)">FAE</button>
+            <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow', event)">EBOW</button>
+            <button id="btnTherm" class="btn" ontouchstart="toggleMod('theremin', event)">THERM</button>
+            <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleSeq('rec', event)">REC</button>
+            <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play', event)">PLAY</button>
+            <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" ontouchstart="stopAll(event)">STOP</button>
+            <button id="btnFae" class="btn" ontouchstart="toggleFae(event)">FAE</button>
         </div>
         <div class="row">
-            <button class="btn ham" onclick="shiftOct(0.75)">HAM DOWN</button>
+            <button id="btnHamDown" class="btn ham" ontouchstart="shiftOct(0.75, event)">HAM DOWN</button>
             <div style="width:82px"></div>
-            <button class="btn ham" onclick="shiftOct(1.33)">HAM UP</button>
+            <button id="btnHamUp" class="btn ham" ontouchstart="shiftOct(1.33, event)">HAM UP</button>
         </div>
     </div>
 </div>
@@ -90,19 +90,18 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),grid=document.getElementById('bucket-grid'),hud=document.getElementById('hud'),n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
 for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
 const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
-uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
-uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform int u_ch;uniform float u_f1;
+uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;uniform float u_f1;
+uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform int u_ch;
 void main(){
     vec2 uv=gl_FragCoord.xy/u_r;
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
     vec2 p = uv - 0.5;
-    float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
-    if(u_m1.y>0.5) s += sin(u_t*60.0)*0.3; 
-    if(u_m2.y>0.5) s = fract(s*15.0)-0.5;
-    if(u_m2.z>0.5) s = tan(s*2.0+u_t);
-    if(u_m3.x>0.5) s += sin(uv.y*15.0-u_t*10.0)*0.2; 
-    if(u_m4.x>0.5) s = sign(s)*0.2;
-    if(u_m4.y>0.5) s = 0.05*sign(sin(uv.y*150.0));
+    float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 10.0);
+    if(u_m1.y>0.5) s += sin(u_t*50.0)*0.3; // ROTS
+    if(u_m1.w>0.5) s *= (1.0 + tan(uv.y*10.0+u_t)*0.5); // GHOST
+    if(u_m2.y>0.5) s = fract(s*10.0)-0.5; // GRAN
+    if(u_m3.x>0.5) s += sin(uv.y*10.0-u_t*10.0)*0.5; // WIND
+    if(u_m4.x>0.5) s = sign(s)*0.2 + sin(u_t*20.0)*0.1; // ROCK
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     if(u_ch==1) l = step(0.44, uv.x+s*0.1)*step(uv.x+s*0.1, 0.56);
     vec3 col = u_f==1?(1.0-u_c):u_c;
@@ -112,13 +111,13 @@ void main(){
 const prg=gl.createProgram();
 function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
 gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
-const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),m1:gl.getUniformLocation(prg,"u_m1"),m2:gl.getUniformLocation(prg,"u_m2"),m3:gl.getUniformLocation(prg,"u_m3"),m4:gl.getUniformLocation(prg,"u_m4"),ch:gl.getUniformLocation(prg,"u_ch"),f1:gl.getUniformLocation(prg,"u_f1")};
+const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),m1:gl.getUniformLocation(prg,"u_m1"),m2:gl.getUniformLocation(prg,"u_m2"),m3:gl.getUniformLocation(prg,"u_m3"),m4:gl.getUniformLocation(prg,"u_m4"),ch:gl.getUniformLocation(prg,"u_ch")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,sN,dN,bitN,rockN,vcs={},mods={whir:0,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,rotFly=0;
+let aX,mG,fN,sN,dN,bitN,rockN,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
 
-function setupEngine(){if(aX)return;aX=new (window.AudioContext||window.webkitAudioContext)();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
+function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.connect(mG);
 rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+8000)*x/(Math.PI+8000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+1000)*x/(Math.PI+1000*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 bitN=aX.createGain();bitN.connect(sN);dN=aX.createDelay(1.);dN.delayTime.value=0.1;let dFB=aX.createGain();dFB.gain.value=0.5;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
@@ -128,63 +127,55 @@ function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
 function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=hx_hud.style.color=h;hud.style.setProperty('--glow',h)}
 
-function setF(v,a,tc){
+function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
-    if(mods.spring) b+=Math.sin(aX.currentTime*50)*400; if(mods.whir) b+=Math.sin(aX.currentTime*20)*300; if(mods.rots) b+=rotFly; if(mods.frac) b+=(Math.random()-0.5)*1500;
-    if(currentChip==='NES'||currentChip==='Z80') b=Math.floor(b/12)*12;
-    if(currentChip==='SID') b *= (0.95 + Math.random()*0.1);
-    if(currentChip==='PAULA') b = Math.floor(b/4)*4;
-    v.osc.type=(currentChip==='NES'||currentChip==='Z80')?'square':(currentChip==='SFC'?'sine':(currentChip==='SID'?'sawtooth':(currentChip==='PAULA'?'square':(mods.theremin?'sine':(mods.fae?'triangle':'sawtooth')))));
-    if(mods.doom){v.osc.type='sawtooth';b*=0.5}
-    v.osc.frequency.setTargetAtTime(b, aX.currentTime, currentChip==='SFC'?0.25:0.01);
-    v.lfoG.gain.setTargetAtTime((mods.wind||mods.ebow)?400:0,aX.currentTime,.05);
+    if(mods.spring) b+=Math.sin(aX.currentTime*50)*400; if(mods.whir) b+=Math.sin(aX.currentTime*20)*300;
+    v.osc.type=(currentChip==='NES'||currentChip==='Z80')?'square':(currentChip==='SFC'?'sine':(currentChip==='SID'?'sawtooth':(mods.theremin?'sine':'sawtooth')));
+    if(mods.doom) b*=0.5;
+    v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
+    if(mods.ghst){
+        if(!v.wr){v.wr=aX.createOscillator();v.wrG=aX.createGain();v.wr.connect(v.wrG);v.wrG.connect(mG);v.wr.start()}
+        v.wr.frequency.setTargetAtTime(b*3.0, aX.currentTime, 0.1); v.wrG.gain.setTargetAtTime(0.4, aX.currentTime, 0.05);
+    }
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
     gl.uniform1f(uL.f1, b);
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 
 function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
 
-function handleStart(e){
-    setupEngine(); if(e.target.tagName==='BUTTON')return;
-    let ts=e.touches; lt=ts.length;
-    for(let i=0;i<lt;i++){
-        let t=ts[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;
-        if(!vcs[id]){
-            vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain()};
-            vcs[id].osc.connect(vcs[id].gain); vcs[id].gain.connect(mods.rock?rockN:bitN);
-            vcs[id].lfo.connect(vcs[id].lfoG); vcs[id].lfoG.connect(vcs[id].osc.frequency);
-            vcs[id].lfo.start(); vcs[id].osc.start();
-        }
-        let c=setF(vcs[id],ang,lt); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
-        if(seq.rec) seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};
-    }
-}
+function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;let ts=e.touches;lt=ts.length;
+for(let i=0;i<lt;i++){
+    let t=ts[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;
+    if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].gain.connect(mods.rock?rockN:bitN);vcs[id].osc.start()}
+    let c=setF(vcs[id],ang);vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
+    if(seq.rec) seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};
+}}
 
-canvas.addEventListener('touchstart',e=>{e.preventDefault();handleStart(e)},{passive:0});
-canvas.addEventListener('touchmove',e=>{e.preventDefault();handleStart(e)},{passive:0});
-canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq')vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1)}if(!e.touches.length)lt=0});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:0});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:0});
+canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq'){
+    if(vcs[id].gain) vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1);
+    if(vcs[id].wrG) vcs[id].wrG.gain.setTargetAtTime(0,aX.currentTime,0.1);
+}}if(!e.touches.length)lt=0});
 
-function setChip(m,e){setupEngine();currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');
-let cI=0; if(m==='NES')cI=1; if(m==='SFC')cI=2; if(m==='SID')cI=4; if(m==='PAULA')cI=5; gl.uniform1i(uL.ch, cI); forceAll()}
+function setChip(m,e){currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');
+let cI=0; if(m==='NES')cI=1; if(m==='SFC')cI=2; gl.uniform1i(uL.ch, cI)}
 function setBank(i,e){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-function toggleMod(m,e){setupEngine();mods[m]=!mods[m];e.target.classList.toggle('active',mods[m]);
+function toggleMod(m,e){mods[m]=!mods[m];e.target.classList.toggle('active',mods[m]);
 gl.uniform4f(uL.m1, mods.whir?1:0, mods.rots?1:0, mods.frac?1:0, mods.ghst?1:0);
 gl.uniform4f(uL.m2, mods.sat?1:0, mods.gran?1:0, mods.broke?1:0, mods.bit?1:0);
 gl.uniform4f(uL.m3, mods.wind?1:0, mods.ring?1:0, mods.vin?1:0, mods.spring?1:0);
-gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1:0);
-if(m==='broke' && mods.broke){let bFB=aX.createGain();bFB.gain.value=1.8;dN.connect(bFB);bFB.connect(dN);} forceAll()}
+gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1:0);}
 function stopAll(){seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
-function toggleSeq(m,e){setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;e.target.classList.toggle('active')}
+function toggleSeq(m,e){if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;e.target.classList.toggle('active')}
 function toggleAllPlay(e){seq.all=!seq.all;e.target.classList.toggle('active')}
 function toggleFae(e){mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);e.target.classList.toggle('active');rB()}
-function shiftOct(m){setupEngine();oct*=m;forceAll()}
-function forceAll(){for(let id in vcs)if(vcs[id]&&vcs[id].osc)setF(vcs[id],vcs[id].last,lt)}
+function shiftOct(m){oct*=m}
 
 setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
-if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain(),sq:1};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].gain.connect(mods.rock?rockN:bitN);vcs['seq'].lfo.connect(vcs['seq'].lfoG);vcs['seq'].lfoG.connect(vcs['seq'].osc.frequency);vcs['seq'].lfo.start();vcs['seq'].osc.start()}let oldO=oct;oct=d.o;setF(vcs['seq'],d.a,1);oct=oldO;vcs['seq'].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.02);ab.style.background=d.c}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
+if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain()};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].gain.connect(mods.rock?rockN:bitN);vcs['seq'].osc.start()}let oldO=oct;oct=d.o;setF(vcs['seq'],d.a);oct=oldO;vcs['seq'].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.02);ab.style.background=d.c}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
 seq.step++;if(seq.step>=64){seq.step=0;if(seq.all&&seq.play){seq.bank=(seq.bank+1)%4;rB()}}},125);
-setInterval(()=>{if(mods.rots)rotFly=(Math.random()-0.5)*1500;else rotFly=0},80);
 function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform1i(uL.f,mods.fae);gl.uniform1i(uL.a,seq.play||lt);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
 requestAnimationFrame(render);
 </script>
