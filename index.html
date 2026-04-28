@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.91 - STABLE TRIGGER</title>
+<meta charset="UTF-8"><title>MARIAH v2.92 - FX SYNC REPAIR</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -22,14 +22,12 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto;touch-action:manipulation;z-index:10001;position:relative;}
 .btn.active{background:#0f0!important;color:#000!important;box-shadow: 0 0 15px #0f0;}
-.btn.broke{border-color:#f00;color:#f00}.btn.broke.active{background:#f00!important;color:#fff!important}
-.btn.doom{border-color:#f00;color:#f00}.btn.doom.active{background:#f00!important;color:#000!important}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.91<br>TOTAL BUTTON SYNC<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.92<br>ROTS & FRAC REPAIR<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -60,7 +58,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
         <div class="row">
             <button id="btnSat" class="btn" onpointerdown="toggleMod('sat', event)">SAT</button>
             <button id="btnGran" class="btn" onpointerdown="toggleMod('gran', event)">GRAN</button>
-            <button id="btnBroke" class="btn broke" onpointerdown="toggleMod('broke', event)">BROKE</button>
+            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" onpointerdown="toggleMod('broke', event)">BROKE</button>
             <button id="btnBit" class="btn" onpointerdown="toggleMod('bit', event)">BIT</button>
             <button id="btnRock" class="btn" onpointerdown="toggleMod('rock', event)">ROCK</button>
         </div>
@@ -69,7 +67,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
             <button id="btnRing" class="btn" onpointerdown="toggleMod('ring', event)">RING</button>
             <button id="btnVin" class="btn" style="color:#0ff;border-color:#0ff" onpointerdown="toggleMod('vin', event)">VIN</button>
             <button id="btnSpring" class="btn" onpointerdown="toggleMod('spring', event)">SPR</button>
-            <button id="btnDoom" class="btn doom" onpointerdown="toggleMod('doom', event)">DOOM</button>
+            <button id="btnDoom" class="btn" style="border-color:#f00;color:#f00" onpointerdown="toggleMod('doom', event)">DOOM</button>
         </div>
         <div class="row">
             <button id="btnEbow" class="btn" onpointerdown="toggleMod('ebow', event)">EBOW</button>
@@ -96,9 +94,10 @@ void main(){
     vec2 uv=gl_FragCoord.xy/u_r;
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
     vec2 p = uv - 0.5;
-    if(u_f == 1) p.x = -p.x; // FAE FLIP
+    if(u_f == 1) p.x = -p.x;
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
-    if(u_m1.y>0.5) s += cos(uv.y*100.0 + u_t*10.0)*0.2; 
+    if(u_m1.y>0.5) s += cos(uv.y*100.0 + u_t*10.0)*0.2; // ROTS VISUAL
+    if(u_m1.z>0.5) s += (fract(uv.y*20.0 + u_t*5.0)-0.5)*0.3; // FRAC VISUAL (WIGGLE)
     if(u_m1.w>0.5) s = mix(s, tan(uv.y*2.0+u_t*5.0), 0.4);
     if(u_m4.y>0.5) s = 0.05*sign(sin(uv.y*200.0));
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
@@ -128,6 +127,8 @@ function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.
 function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
     if(mods.spring) b+=Math.sin(aX.currentTime*50)*400; if(mods.whir) b+=Math.sin(aX.currentTime*20)*300;
+    if(mods.rots) b *= (0.8 + Math.random()*0.4); // ROTS AUDIO (VIBRATIC)
+    if(mods.frac) b += (Math.random()-0.5)*3000; // FRAC AUDIO (EXTREME JITTER)
     v.osc.type=(currentChip==='NES'||currentChip==='Z80')?'square':(currentChip==='SFC'?'sine':(currentChip==='SID'?'sawtooth':(mods.theremin?'sine':'sawtooth')));
     if(mods.doom) b*=0.5;
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
@@ -140,11 +141,11 @@ function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if
 
 function syncVoice(v){ if(v && v.gain){v.gain.disconnect(); let dest = mods.rock?rockG:(mods.bit?bitG:mG); v.gain.connect(dest);}}
 
-canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId; let ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); let c=setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); if(seq.rec)seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct}; };
+canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId; let ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); if(seq.rec) {let c=setF(vcs[id],ang); seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};} };
 canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
 canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); if(vcs[id].wrG) vcs[id].wrG.gain.setTargetAtTime(0,aX.currentTime,0.1); delete vcs[id]; } if(Object.keys(vcs).length===0){lt=0; gl.uniform1i(uL.a,0);}};
 
-function setChip(m,e){e.preventDefault(); e.stopPropagation(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()).classList.add('active'); gl.uniform1i(uL.ch, m==='NES'?1:0); for(let id in vcs) setF(vcs[id],vcs[id].lastAng);}
+function setChip(m,e){e.preventDefault(); e.stopPropagation(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); gl.uniform1i(uL.ch, m==='NES'?1:0); for(let id in vcs) setF(vcs[id],vcs[id].lastAng);}
 function setBank(i,e){e.preventDefault(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
 function toggleMod(m,e){e.preventDefault(); e.stopPropagation(); mods[m]=!mods[m]; e.target.classList.toggle('active',mods[m]);
