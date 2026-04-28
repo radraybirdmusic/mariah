@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.09 - GHOST HAND</title>
+<meta charset="UTF-8"><title>MARIAH v3.10 - SOUL RESTORE</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -27,7 +27,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.09<br>GHOST HAND RESTORE<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.10<br>SOUL RESTORATION<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -98,11 +98,15 @@ void main(){
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
     if(u_m1.y>0.5) s += cos(uv.y*150.0 + u_t*15.0)*0.2; 
     if(u_m1.z>0.5) s += (fract(uv.y*30.0 + u_t*5.0)-0.5)*0.6;
-    if(u_m1.w>0.5) s = mix(s, tan(uv.y*20.0 + u_t*10.0), 0.8); // GHOST HAND VISUAL (AGGRESSIVE)
+    if(u_m1.w>0.5) s = mix(s, tan(uv.y*20.0 + u_t*10.0), 0.8); 
+    if(u_m2.x>0.5) s = mix(s, sin(s*40.0), 0.6); // SAT VISUAL (GLOW BLOOM)
+    if(u_m2.y>0.5) s *= (0.5 + step(0.9, fract(uv.y*15.0 + u_t*20.0))*2.0); // GRAN VISUAL (SHRED)
+    if(u_m2.z>0.5) s = tan(uv.y+uv.x + u_t*5.0); 
+    if(u_m2.w>0.5) s = floor(s*3.0)/3.0; // BIT VISUAL (STEP)
+    if(u_m4.x>0.5) s = sign(s)*(0.1+abs(sin(uv.y*600.0+u_t*40.0))*0.7); // ROCK VISUAL (SPINE SHATTER)
     if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*60.0 + u_t*15.0))-0.5)*0.6; 
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     vec3 col = u_f==1?(1.0-u_c):u_c;
-    if(u_m1.w>0.5) col += vec3(0.4, 0.3, 0.1); // ADDITIVE GHOST GLOW
     gl_FragColor = vec4(col*l, 1.0);
     if(u_f==1) gl_FragColor = vec4(1.0-(1.0-col)*l, 1.0);
 }`;
@@ -113,9 +117,12 @@ const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,dN,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
+let aX,mG,fN,dN,rockG,satG,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
 
-function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.connect(mG);dN=aX.createDelay(1.);dN.delayTime.value=0.2;let dFB=aX.createGain();dFB.gain.value=0.6;dN.connect(dFB);dFB.connect(dN);dN.connect(mG);document.getElementById('overlay').style.display='none'}
+function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
+rockG=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=Math.sign(x)*0.9;}rockG.curve=rC;rockG.connect(mG);
+satG=aX.createWaveShaper();let sC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;sC[i]=Math.tanh(x*15);}satG.curve=sC;satG.connect(mG);
+fN=aX.createBiquadFilter();fN.connect(mG);dN=aX.createDelay(1.);dN.delayTime.value=0.2;let dFB=aX.createGain();dFB.gain.value=0.6;dN.connect(dFB);dFB.connect(dN);dN.connect(mG);document.getElementById('overlay').style.display='none'}
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
@@ -126,11 +133,8 @@ function setF(v,a){
     if(mods.whir) b+=Math.sin(aX.currentTime*20)*400;
     if(mods.rots) b *= (0.7 + Math.random()*0.6);
     if(mods.frac) b += (Math.random()-0.5)*5000;
-    /* GHOST HAND: ADDITIVE STACKING LOGIC */
-    if(mods.ghst){ 
-        let noteCount = Object.keys(vcs).length;
-        b *= (1.0 + Math.sin(aX.currentTime*(15 + noteCount*5))* (0.4 + noteCount*0.2));
-    }
+    if(mods.bit) b = Math.floor(b/150)*150; // BIT AUDIO SOUL
+    if(mods.ghst){ let n = Object.keys(vcs).length; b *= (1.0 + Math.sin(aX.currentTime*(15 + n*5))* (0.4 + n*0.2));}
     if(mods.vin) b += (Math.sin(aX.currentTime * 45) * 400 * Math.sin(aX.currentTime * 7));
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
     let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
@@ -139,7 +143,13 @@ function setF(v,a){
 
 function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
 
-function syncVoice(v){ if(v && v.gain){v.gain.disconnect(); if(mods.broke){v.gain.connect(dN)}else{v.gain.connect(mG)}}}
+function syncVoice(v){ if(v && v.gain){
+    v.gain.disconnect(); 
+    let d = mods.rock?rockG:(mods.sat?satG:mG);
+    if(mods.gran){ if(!v.c){v.c=aX.createGain();v.l=aX.createOscillator();v.l.frequency.value=60;v.l.connect(v.c.gain);v.l.start()} v.gain.connect(v.c); v.c.connect(d); }
+    else { v.gain.connect(d); }
+    if(mods.broke){v.gain.connect(dN)}
+}}
 
 canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId,ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); };
 canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
@@ -153,13 +163,13 @@ gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1
 for(let id in vcs) { syncVoice(vcs[id]); setF(vcs[id], vcs[id].lastAng); }}
 
 function stopAll(e){e.preventDefault(); vcs={}; document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'))}
-function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae);}
+function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae); for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
 function shiftOct(m,e){e.preventDefault(); oct*=m; for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
 function setChip(m,e){e.preventDefault(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
 function setBank(i,e){e.preventDefault(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
 
-function render(t){ gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight); gl.uniform1f(uL.t,t*.001); gl.uniform2f(uL.r,canvas.width,canvas.height); gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]); gl.drawArrays(gl.TRIANGLES,0,6); requestAnimationFrame(render); }
-render(0);
+function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
+requestAnimationFrame(render);
 </script>
 </body>
 </html>
