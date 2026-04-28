@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v3.32 - UNIFIED REPAIR</title>
+<meta charset="UTF-8"><title>MARIAH v3.33 - INVERSION FIX</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -28,7 +28,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v3.32<br>UNIFIED REPAIR<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.33<br>INVERSION FIXED<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
@@ -93,13 +93,16 @@ uniform float u_t, u_f1; uniform vec2 u_r; uniform int u_f, u_a; uniform vec3 u_
 uniform vec4 u_m1, u_m2, u_m3, u_m4;
 void main(){
     vec2 uv=gl_FragCoord.xy/u_r; if(u_a==0){gl_FragColor=vec4(0.,0.02,0.,1.);return;}
-    vec2 p=uv-0.5; float s=sin(uv.y*(15.+u_f1*0.002)+u_t*5.);
+    vec2 p=uv-0.5; if(u_f==1)p.x=-p.x; float s=sin(uv.y*(15.+u_f1*0.002)+u_t*5.);
     if(u_m1.w>0.5)s=mix(s,tan(uv.y*20.+u_t*10.),0.8); if(u_m2.x>0.5)s=mix(s,sin(s*40.),0.6);
     if(u_m2.y>0.5)s*=(0.5+step(0.9,fract(uv.y*15.+u_t*20.))*2.); if(u_m2.w>0.5)s=floor(s*3.)/3.;
     if(u_m4.x>0.5)s=sign(s)*(0.1+abs(sin(uv.y*600.+u_t*40.))*0.7); if(u_m3.y>0.5)s*=step(0.9,fract(uv.y*20.+u_t*10.));
     if(u_m3.w>0.5)s=mix(s,sin(u_t*80.+uv.y*100.),0.5); if(u_m4.y>0.5)s+=(sin(uv.x*100.+u_t*20.)*0.2);
     if(u_m4.w>0.5)s=tan(uv.y*2.+s*5.+u_t); float l=smoothstep(0.15,0.0,abs(p.x+s*0.2));
-    gl_FragColor=vec4(u_c*l,1.0);
+    // SHADER INVERSION FIX
+    vec3 col = u_f == 1 ? (1.0 - u_c) : u_c;
+    gl_FragColor=vec4(col*l,1.0);
+    if(u_f == 1) gl_FragColor = vec4(1.0 - (1.0 - col)*l, 1.0);
 }`;
 const prg=gl.createProgram();
 function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
@@ -130,9 +133,9 @@ function setF(v,a){
     v.osc.frequency.setTargetAtTime(b,aX.currentTime,0.02);
     let h=(a/360)*285/360; if(mods.fae)h=285-h; let c=hR(h,1,.5); rgb=c; 
     
-    // UNIFIED HUD UPDATE
     let hexS=rgbToHex(c); const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; let n=Math.round(12*Math.log2(b/440)+69);
     n_hud.innerText=ns[n%12]+Math.floor(n/12-1); hz_hud.innerText=`${Math.round(b)}Hz`; hx_hud.innerText=hexS;
+    if(mods.fae){hx_hud.style.color=n_hud.style.color=hz_hud.style.color="#000";} else {hx_hud.style.color=n_hud.style.color=hexS;}
     
     gl.uniform1f(uL.f1,b); gl.uniform1i(uL.a,1);
     if(seq.rec && !v.sq){seq.banks[seq.bank][seq.step]={a:a,o:oct,c:hexS}; document.getElementById('bucket-'+seq.step).style.background=hexS;}
@@ -173,7 +176,7 @@ setInterval(()=>{if(!aX)return; document.querySelectorAll('.bucket').forEach(b=>
     seq.step++; if(seq.step>=64){seq.step=0; if(seq.all&&seq.play){let nB=(seq.bank+1)%4; setBank(nB, {preventDefault:()=>{}, target:document.getElementById('bank'+nB)})}}
 },125);
 
-function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight); gl.uniform1f(uL.t,t*.001); gl.uniform2f(uL.r,canvas.width,canvas.height); gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]); gl.drawArrays(gl.TRIANGLES,0,6); requestAnimationFrame(render)}
+function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight); gl.uniform1f(uL.t,t*.001); gl.uniform2f(uL.r,canvas.width,canvas.height); gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]); gl.uniform1i(uL.f, mods.fae?1:0); gl.drawArrays(gl.TRIANGLES,0,6); requestAnimationFrame(render)}
 requestAnimationFrame(render);
 </script>
 </body>
