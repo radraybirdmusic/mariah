@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.83 - CLEAN SIGNAL</title>
+<meta charset="UTF-8"><title>MARIAH v2.84 - FX REPAIR</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -29,60 +29,60 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.83<br>CLEAN SIGNAL<br>TAP TO INITIALIZE</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.84<br>FX REPAIR DROP<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
     <div id="chip-row">
-        <button id="btnUser" class="btn chip active" ontouchstart="setChip('USER', event)">USER</button>
-        <button id="btnNes" class="btn chip" ontouchstart="setChip('NES', event)">NES</button>
-        <button id="btnSfc" class="btn chip" ontouchstart="setChip('SFC', event)">SFC</button>
-        <button id="btnPaula" class="btn chip" ontouchstart="setChip('PAULA', event)">PAULA</button>
-        <button id="btnSid" class="btn chip" ontouchstart="setChip('SID', event)">SID</button>
-        <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80', event)">Z80</button>
+        <button id="btnUser" class="btn chip active" onclick="setChip('USER', event)">USER</button>
+        <button id="btnNes" class="btn chip" onclick="setChip('NES', event)">NES</button>
+        <button id="btnSfc" class="btn chip" onclick="setChip('SFC', event)">SFC</button>
+        <button id="btnPaula" class="btn chip" onclick="setChip('PAULA', event)">PAULA</button>
+        <button id="btnSid" class="btn chip" onclick="setChip('SID', event)">SID</button>
+        <button id="btnZ80" class="btn chip" onclick="setChip('Z80', event)">Z80</button>
     </div>
     <div id="bank-row">
-        <button id="bank0" class="btn bank active" ontouchstart="setBank(0, event)">P1</button>
-        <button id="bank1" class="btn bank" ontouchstart="setBank(1, event)">P2</button>
-        <button id="bank2" class="btn bank" ontouchstart="setBank(2, event)">P3</button>
-        <button id="bank3" class="btn bank" ontouchstart="setBank(3, event)">P4</button>
-        <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" ontouchstart="toggleAllPlay(event)">ALL</button>
+        <button id="bank0" class="btn bank active" onclick="setBank(0, event)">P1</button>
+        <button id="bank1" class="btn bank" onclick="setBank(1, event)">P2</button>
+        <button id="bank2" class="btn bank" onclick="setBank(2, event)">P3</button>
+        <button id="bank3" class="btn bank" onclick="setBank(3, event)">P4</button>
+        <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" onclick="toggleAllPlay(event)">ALL</button>
     </div>
     <div id="bucket-grid"></div>
     <div id="controls">
-        <button class="btn kill" ontouchstart="window.location.reload()">!! NUCLEAR RESET !!</button>
+        <button class="btn kill" onclick="window.location.reload()">!! NUCLEAR RESET !!</button>
         <div class="row">
-            <button id="btnWhir" class="btn active" ontouchstart="toggleMod('whir', event)">WHIR</button>
-            <button id="btnRots" class="btn" ontouchstart="toggleMod('rots', event)">ROTS</button>
-            <button id="btnFrac" class="btn" ontouchstart="toggleMod('frac', event)">FRAC</button>
-            <button id="btnGhst" class="btn" ontouchstart="toggleMod('ghst', event)">GHOST</button>
+            <button id="btnWhir" class="btn active" onclick="toggleMod('whir', event)">WHIR</button>
+            <button id="btnRots" class="btn" onclick="toggleMod('rots', event)">ROTS</button>
+            <button id="btnFrac" class="btn" onclick="toggleMod('frac', event)">FRAC</button>
+            <button id="btnGhst" class="btn" onclick="toggleMod('ghst', event)">GHOST</button>
         </div>
         <div class="row">
-            <button id="btnSat" class="btn" ontouchstart="toggleMod('sat', event)">SAT</button>
-            <button id="btnGran" class="btn" ontouchstart="toggleMod('gran', event)">GRAN</button>
-            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleMod('broke', event)">BROKE</button>
-            <button id="btnBit" class="btn" ontouchstart="toggleMod('bit', event)">BIT</button>
-            <button id="btnRock" class="btn" ontouchstart="toggleMod('rock', event)">ROCK</button>
+            <button id="btnSat" class="btn" onclick="toggleMod('sat', event)">SAT</button>
+            <button id="btnGran" class="btn" onclick="toggleMod('gran', event)">GRAN</button>
+            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" onclick="toggleMod('broke', event)">BROKE</button>
+            <button id="btnBit" class="btn" onclick="toggleMod('bit', event)">BIT</button>
+            <button id="btnRock" class="btn" onclick="toggleMod('rock', event)">ROCK</button>
         </div>
         <div class="row">
-            <button id="btnWind" class="btn" ontouchstart="toggleMod('wind', event)">WIND</button>
-            <button id="btnRing" class="btn" ontouchstart="toggleMod('ring', event)">RING</button>
-            <button id="btnVin" class="btn" ontouchstart="toggleMod('vin', event)" style="color:#0ff;border-color:#0ff">VIN</button>
-            <button id="btnSpring" class="btn" ontouchstart="toggleMod('spring', event)">SPR</button>
-            <button id="btnDoom" class="btn doom" ontouchstart="toggleMod('doom', event)">DOOM</button>
+            <button id="btnWind" class="btn" onclick="toggleMod('wind', event)">WIND</button>
+            <button id="btnRing" class="btn" onclick="toggleMod('ring', event)">RING</button>
+            <button id="btnVin" class="btn" style="color:#0ff;border-color:#0ff" onclick="toggleMod('vin', event)">VIN</button>
+            <button id="btnSpring" class="btn" onclick="toggleMod('spring', event)">SPR</button>
+            <button id="btnDoom" class="btn doom" onclick="toggleMod('doom', event)">DOOM</button>
         </div>
         <div class="row">
-            <button id="btnEbow" class="btn" ontouchstart="toggleMod('ebow', event)">EBOW</button>
-            <button id="btnTherm" class="btn" ontouchstart="toggleMod('theremin', event)">THERM</button>
-            <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" ontouchstart="toggleSeq('rec', event)">REC</button>
-            <button id="btnPlay" class="btn" ontouchstart="toggleSeq('play', event)">PLAY</button>
-            <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" ontouchstart="stopAll(event)">STOP</button>
-            <button id="btnFae" class="btn" ontouchstart="toggleFae(event)">FAE</button>
+            <button id="btnEbow" class="btn" onclick="toggleMod('ebow', event)">EBOW</button>
+            <button id="btnTherm" class="btn" onclick="toggleMod('theremin', event)">THERM</button>
+            <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onclick="toggleSeq('rec', event)">REC</button>
+            <button id="btnPlay" class="btn" onclick="toggleSeq('play', event)">PLAY</button>
+            <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onclick="stopAll()">STOP</button>
+            <button id="btnFae" class="btn" onclick="toggleFae(event)">FAE</button>
         </div>
         <div class="row">
-            <button id="btnHamDown" class="btn ham" ontouchstart="shiftOct(0.75, event)">HAM DOWN</button>
+            <button class="btn ham" onclick="shiftOct(0.75)">HAM DOWN</button>
             <div style="width:82px"></div>
-            <button id="btnHamUp" class="btn ham" ontouchstart="shiftOct(1.33, event)">HAM UP</button>
+            <button class="btn ham" onclick="shiftOct(1.33)">HAM UP</button>
         </div>
     </div>
 </div>
@@ -90,18 +90,17 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),grid=document.getElementById('bucket-grid'),hud=document.getElementById('hud'),n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
 for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
 const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
-uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;uniform float u_f1;
-uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform int u_ch;
+uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
+uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform int u_ch;uniform float u_f1;
 void main(){
     vec2 uv=gl_FragCoord.xy/u_r;
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
     vec2 p = uv - 0.5;
-    float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 10.0);
-    if(u_m1.y>0.5) s += sin(u_t*50.0)*0.3; // ROTS
-    if(u_m1.w>0.5) s *= (1.0 + tan(uv.y*10.0+u_t)*0.5); // GHOST
-    if(u_m2.y>0.5) s = fract(s*10.0)-0.5; // GRAN
-    if(u_m3.x>0.5) s += sin(uv.y*10.0-u_t*10.0)*0.5; // WIND
-    if(u_m4.x>0.5) s = sign(s)*0.2 + sin(u_t*20.0)*0.1; // ROCK
+    float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
+    if(u_m1.y>0.5) s += cos(uv.y*100.0 + u_t*10.0)*0.2; // ROTS VISUAL
+    if(u_m1.z>0.5) s = s + (fract(uv.y*10.0 + u_t)*0.5 - 0.25); // FRAC VISUAL
+    if(u_m1.w>0.5) s *= (1.0 + tan(uv.y*5.0 + u_t)*0.6); // GHOST VISUAL
+    if(u_m4.x>0.5) s = sign(s) * (0.1 + abs(sin(u_t*15.0))*0.2); // ROCK VISUAL
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
     if(u_ch==1) l = step(0.44, uv.x+s*0.1)*step(uv.x+s*0.1, 0.56);
     vec3 col = u_f==1?(1.0-u_c):u_c;
@@ -111,14 +110,14 @@ void main(){
 const prg=gl.createProgram();
 function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
 gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
-const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),m1:gl.getUniformLocation(prg,"u_m1"),m2:gl.getUniformLocation(prg,"u_m2"),m3:gl.getUniformLocation(prg,"u_m3"),m4:gl.getUniformLocation(prg,"u_m4"),ch:gl.getUniformLocation(prg,"u_ch")};
+const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),m1:gl.getUniformLocation(prg,"u_m1"),m2:gl.getUniformLocation(prg,"u_m2"),m3:gl.getUniformLocation(prg,"u_m3"),m4:gl.getUniformLocation(prg,"u_m4"),ch:gl.getUniformLocation(prg,"u_ch"),f1:gl.getUniformLocation(prg,"u_f1")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
 let aX,mG,fN,sN,dN,bitN,rockN,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
 
-function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.connect(mG);
-rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+8000)*x/(Math.PI+8000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
+function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
+rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+15000)*x/(Math.PI+15000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+1000)*x/(Math.PI+1000*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 bitN=aX.createGain();bitN.connect(sN);dN=aX.createDelay(1.);dN.delayTime.value=0.1;let dFB=aX.createGain();dFB.gain.value=0.5;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
 document.getElementById('overlay').style.display='none'}
@@ -127,15 +126,20 @@ function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
 function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=hx_hud.style.color=h;hud.style.setProperty('--glow',h)}
 
-function setF(v,a){
+function setF(v,a,tc){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
     if(mods.spring) b+=Math.sin(aX.currentTime*50)*400; if(mods.whir) b+=Math.sin(aX.currentTime*20)*300;
+    if(mods.rots) b *= (0.9 + Math.random()*0.2); // ROTS AUDIO
+    if(mods.frac) b += (Math.random()-0.5)*2000; // FRAC AUDIO
     v.osc.type=(currentChip==='NES'||currentChip==='Z80')?'square':(currentChip==='SFC'?'sine':(currentChip==='SID'?'sawtooth':(mods.theremin?'sine':'sawtooth')));
     if(mods.doom) b*=0.5;
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
-    if(mods.ghst){
-        if(!v.wr){v.wr=aX.createOscillator();v.wrG=aX.createGain();v.wr.connect(v.wrG);v.wrG.connect(mG);v.wr.start()}
-        v.wr.frequency.setTargetAtTime(b*3.0, aX.currentTime, 0.1); v.wrG.gain.setTargetAtTime(0.4, aX.currentTime, 0.05);
+    if(mods.ghst){ // GHOST AUDIO RECOVERY
+        if(!v.wr){v.wr=aX.createOscillator();v.wrG=aX.createGain();v.wr.type='sine';v.wr.connect(v.wrG);v.wrG.connect(mG);v.wr.start()}
+        v.wr.frequency.setValueAtTime(b, aX.currentTime);
+        v.wr.frequency.exponentialRampToValueAtTime(b*4.0, aX.currentTime+0.8);
+        v.wrG.gain.setValueAtTime(0.5, aX.currentTime);
+        v.wrG.gain.exponentialRampToValueAtTime(0.001, aX.currentTime+0.8);
     }
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
     gl.uniform1f(uL.f1, b);
@@ -147,7 +151,7 @@ function hI(e){setupEngine();if(e.target.tagName==='BUTTON')return;let ts=e.touc
 for(let i=0;i<lt;i++){
     let t=ts[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;
     if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain()};vcs[id].osc.connect(vcs[id].gain);vcs[id].gain.connect(mods.rock?rockN:bitN);vcs[id].osc.start()}
-    let c=setF(vcs[id],ang);vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
+    let c=setF(vcs[id],ang,lt);vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05);
     if(seq.rec) seq.banks[seq.bank][seq.step]={a:ang,c:c,o:oct};
 }}
 
