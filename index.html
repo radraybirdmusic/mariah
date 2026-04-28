@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.88 - INSTANT TRIGGER</title>
+<meta charset="UTF-8"><title>MARIAH v2.89 - VISUAL RESTORE</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -21,7 +21,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .bucket.playhead{border:3px solid #f0f !important;box-shadow:0 0 15px #f0f;z-index:10;}
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
-.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto;touch-action:manipulation;}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto;touch-action:manipulation;z-index:10001;}
 .btn.active{background:#0f0!important;color:#000!important}
 .btn.doom{border-color:#f00;color:#f00}.btn.doom.active{background:#f00!important;color:#000!important}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
@@ -29,7 +29,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.88<br>INSTANT TRIGGER FIX<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.89<br>VISUALS RESTORED<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -96,7 +96,7 @@ void main(){
     vec2 uv=gl_FragCoord.xy/u_r;
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
     vec2 p = uv - 0.5;
-    if(u_f == 1) p.x = -p.x; // FAE Mode Flip
+    if(u_f == 1) p.x = -p.x;
     float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
     if(u_m1.y>0.5) s += cos(uv.y*100.0 + u_t*10.0)*0.2; 
     if(u_m1.w>0.5) s = mix(s, tan(uv.y*2.0+u_t*5.0), 0.4);
@@ -133,7 +133,7 @@ function setF(v,a){
     v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
     if(mods.ghst){if(!v.wr){v.wr=aX.createOscillator();v.wrG=aX.createGain();v.wr.connect(v.wrG);v.wrG.connect(mG);v.wr.start()} v.wr.frequency.setTargetAtTime(b*2,aX.currentTime,0.1);v.wrG.gain.setTargetAtTime(0.3,aX.currentTime,0.1)}
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
-    gl.uniform1f(uL.f1, b);
+    gl.uniform1f(uL.f1, b); gl.uniform1i(uL.a, 1);
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 
 function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
@@ -141,7 +141,7 @@ function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if
 function syncVoice(id){ if(vcs[id]){vcs[id].gain.disconnect(); let dest = mods.rock?rockG:(mods.bit?bitG:mG); vcs[id].gain.connect(dest);}}
 
 function handleTouch(e){
-    setupEngine(); if(e.target.tagName==='BUTTON')return;
+    setupEngine();
     let ts=e.touches; lt=ts.length;
     for(let i=0;i<lt;i++){
         let t=ts[i],id=t.identifier,ang=(t.clientX/window.innerWidth)*360;
@@ -156,7 +156,7 @@ canvas.addEventListener('touchmove',e=>{e.preventDefault();handleTouch(e)},{pass
 canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq'){
     if(vcs[id].gain) vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1);
     if(vcs[id].wrG) vcs[id].wrG.gain.setTargetAtTime(0,aX.currentTime,0.1);
-}}if(!e.touches.length)lt=0});
+}}if(!e.touches.length){lt=0; gl.uniform1i(uL.a, 0);}});
 
 function setChip(m,e){currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');gl.uniform1i(uL.ch, m==='NES'?1:0)}
 function setBank(i,e){seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');rB()}
