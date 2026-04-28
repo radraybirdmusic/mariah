@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.67 - SIGILS</title>
+<meta charset="UTF-8"><title>MARIAH v2.68 - DOOM</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -23,27 +23,27 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;touch-action:none;cursor:pointer;pointer-events:auto}
 .btn.active{background:#0f0!important;color:#000!important;box-shadow:0 0 15px #0f0}
+.btn.doom{border-color:#f00;color:#f00;text-shadow: 0 0 5px #f00;}.btn.doom.active{background:#f00!important;color:#000!important;animation:shake 0.1s infinite;}
+@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(2px)}50%{transform:translateX(-2px)}100%{transform:translateX(0)}}
 .btn.fx{border-color:#ff0;color:#ff0}.btn.fx.active{background:#ff0!important;color:#000!important}
-.btn.broke{border-color:#f00;color:#f00}.btn.broke.active{background:#f00!important;color:#fff!important;animation:pulse 0.1s infinite;}
 .btn.ham{border-color:#fff;color:#fff;min-width:120px}
 .spacer{width:82px;}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
-@keyframes pulse{0%{opacity:1}50%{opacity:0.2}100%{opacity:1}}
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.67<br>SIGIL GEN & SPC JOY<br>TAP TO INITIALIZE</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.68<br>DOOM ENGINE ACTIVATED<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
     <div id="chip-row">
         <button id="btnUser" class="btn chip active" ontouchstart="setChip('USER', event)">USER</button>
-        <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80', event)">Z80</button>
-        <button id="btnNes" class="btn chip" ontouchstart="setChip('NES', event)">FAMICOM</button>
-        <button id="btnSid" class="btn chip" ontouchstart="setChip('SID', event)">SID C64</button>
-        <button id="btnSpc" class="btn chip" ontouchstart="setChip('SPC', event)">SPC SNES</button>
+        <button id="btnNes" class="btn chip" ontouchstart="setChip('NES', event)">NES</button>
+        <button id="btnSpc" class="btn chip" ontouchstart="setChip('SPC', event)">SFC</button>
         <button id="btnPaula" class="btn chip" ontouchstart="setChip('PAULA', event)">PAULA</button>
+        <button id="btnSid" class="btn chip" ontouchstart="setChip('SID', event)">SID</button>
+        <button id="btnZ80" class="btn chip" ontouchstart="setChip('Z80', event)">Z80</button>
     </div>
     <div id="bank-row">
         <button id="bank0" class="btn bank active" ontouchstart="setBank(0, event)">P1</button>
@@ -64,7 +64,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
         <div class="row">
             <button id="btnSat" class="btn fx" ontouchstart="toggleMod('sat', event)">SAT</button>
             <button id="btnGran" class="btn fx" ontouchstart="toggleMod('gran', event)">GRAN</button>
-            <button id="btnBroke" class="btn broke" ontouchstart="toggleMod('broke', event)">BROKE</button>
+            <button id="btnDoom" class="btn doom" ontouchstart="toggleMod('doom', event)">DOOM</button>
             <button id="btnBit" class="btn fx" ontouchstart="toggleMod('bit', event)">BIT</button>
             <button id="btnRock" class="btn fx" ontouchstart="toggleMod('rock', event)">ROCK</button>
         </div>
@@ -95,53 +95,50 @@ const n_hud=document.getElementById('note-name'),hz_hud=document.getElementById(
 for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;grid.appendChild(b)}
 const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
 uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
-uniform float u_f1;uniform float u_f2;uniform int u_chip;uniform vec4 u_mods; // x:bit, y:gran, z:broke, w:wah
+uniform float u_f1;uniform float u_f2;uniform int u_chip;uniform vec4 u_m; // x:bit, y:gran, z:doom, w:rots
 
 void main(){
     vec2 uv=gl_FragCoord.xy/u_r;
     if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
-    
     vec2 p = uv - 0.5;
-    float m1 = sin(atan(p.y,p.x)*3. + u_t*5.) * length(p);
-    float sigil = sin(uv.y*20.*(u_f1*0.001) + u_t*10.);
+    float freq_snap = u_f1 * 0.001;
+    float shape = sin(uv.y * (20.0 + freq_snap*10.0) + u_t * 10.0);
     
-    // Sigil Morphing Logic
-    if(u_mods.x > 0.5) sigil = floor(sigil*4.0)/4.0; // BIT Sigil
-    if(u_mods.y > 0.5) sigil = fract(sigil*u_f1*0.01); // GRAN Sigil
-    if(u_mods.z > 0.5) sigil = tan(sigil + u_t); // BROKE Sigil
-    if(u_mods.w > 0.5) sigil += sin(length(p)*50. - u_t*10.)*0.2; // WAH Sigil
-    
-    float l = smoothstep(0.15, 0., abs(p.x + sigil*0.1));
-    if(u_chip==1) l = step(0.45, uv.x+sigil*0.05)*step(uv.x+sigil*0.05, 0.55);
-    
+    if(u_m.x > 0.5) shape = floor(shape * 5.0) / 5.0; // BIT SIGIL
+    if(u_m.y > 0.5) shape = mod(shape, 0.2) * 5.0; // GRAN SIGIL
+    if(u_m.z > 0.5) shape = tan(shape * 0.8 + u_t) * 0.2; // DOOM SIGIL
+    if(u_m.w > 0.5) shape *= sin(u_t * 20.0); // ROTS SIGIL
+
+    float l = smoothstep(0.18, 0., abs(p.x + shape * (0.1 + freq_snap*0.2)));
+    if(u_chip == 1) l = step(0.46, uv.x+shape*0.1)*step(uv.x+shape*0.1, 0.54);
+    if(u_chip == 2) l = smoothstep(0.3, 0., abs(p.x + shape*0.05)); // SFC Soft
+
     vec3 col=u_f==1?(1.-u_c):u_c;
     gl_FragColor=vec4(col*l,1.);
     if(u_f==1)gl_FragColor=vec4(1.-(1.-col)*l,1.);
 }`;
 function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
 const prg=gl.createProgram();gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
-const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),f2:gl.getUniformLocation(prg,"u_f2"),chip:gl.getUniformLocation(prg,"u_chip"),mods:gl.getUniformLocation(prg,"u_mods")};
+const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),f1:gl.getUniformLocation(prg,"u_f1"),f2:gl.getUniformLocation(prg,"u_f2"),chip:gl.getUniformLocation(prg,"u_chip"),m:gl.getUniformLocation(prg,"u_m")};
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,sN,dN,brkG,vinN,spcN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
+let aX,mG,fN,sN,dN,vN,rG,rO,bitN,rockN,doomG,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,doom:0,vin:0};
 let currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,holdTime={},rotFly=0,freqs=[440,440];
 
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
 fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
-spcN=aX.createConvolver(); // Placeholder for SNES Gaussian Echo
 rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+2000)*x/(Math.PI+2000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+600)*x/(Math.PI+600*Math.abs(x))}sN.curve=c;sN.connect(rockN);
-vinN=aX.createBiquadFilter();vinN.type='bandpass';vinN.frequency.value=1000;vinN.Q.value=30;vinN.connect(sN);
-bitN=aX.createGain();bitN.connect(vinN);
-dN=aX.createDelay(1.);dN.delayTime.value=0.08;
-brkG=aX.createGain();brkG.gain.value=0.7;dN.connect(brkG);brkG.connect(dN);dN.connect(bitN);
+vN=aX.createBiquadFilter();vN.type='bandpass';vN.frequency.value=1000;vN.Q.value=30;vN.connect(sN);
+bitN=aX.createGain();bitN.connect(vN);
+dN=aX.createDelay(1.);dN.delayTime.value=0.08;let dFB=aX.createGain();dFB.gain.value=0.6;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
-function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=h;hx_hud.style.color=h;hud.style.setProperty('--glow',h);curFreq=f;}
+function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;n_hud.style.color=h;hx_hud.style.color=h;hud.style.setProperty('--glow',h);}
 
 function calcFreq(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
@@ -149,10 +146,9 @@ function calcFreq(v,a){
     if(mods.whir) b += Math.sin(aX.currentTime*18)*250;
     if(mods.rots) b += rotFly;
     if(mods.frac) b += (Math.random()-0.5)*800;
-    if(currentChip==='Z80') b = Math.floor(b/32)*32;
-    if(currentChip==='NES') b = Math.floor(b/8)*8;
+    if(currentChip==='NES') b = Math.floor(b/16)*16;
     if(currentChip==='SID') b *= (1.0 + Math.sin(aX.currentTime*50)*0.02);
-    if(currentChip==='SPC') b *= (1.0 + Math.sin(aX.currentTime*5)*0.005); // SNES "Stable" vibrato
+    if(currentChip==='Z80') b = Math.floor(b/32)*32;
     return b;
 }
 
@@ -160,30 +156,21 @@ setInterval(() => { if(mods.rots) rotFly = (Math.random() - 0.5) * 600; else rot
 
 function setF(v,a,id,tc){
     let b=calcFreq(v,a);
-    if(currentChip==='Z80') v.osc.type='square';
-    else if(currentChip==='NES') v.osc.type='triangle';
-    else if(currentChip==='SID') v.osc.type='sawtooth';
+    if(currentChip==='NES') v.osc.type='square';
     else if(currentChip==='SPC') v.osc.type='sine';
+    else if(currentChip==='PAULA') v.osc.type='sawtooth';
     else v.osc.type=mods.theremin?'sine':(mods.fae?'triangle':'sawtooth');
     
-    if(mods.theremin && tc > 1) b *= (1.0 + (tc-1)*0.01);
+    if(mods.doom){
+        if(!v.doomO){v.doomO=aX.createOscillator();v.doomG=aX.createGain();v.doomO.type='sawtooth';v.doomO.connect(v.doomG);v.doomG.connect(rockN);v.doomO.start();}
+        v.doomO.frequency.setValueAtTime(b*0.5, aX.currentTime);
+        v.doomG.gain.setValueAtTime(0.6, aX.currentTime);
+    }
     
-    let time = (currentChip==='NES'||currentChip==='SID') ? 0.08 : 0.02;
-    v.osc.frequency.setTargetAtTime(b, aX.currentTime, time);
+    let t = currentChip==='SPC' ? 0.15 : 0.02;
+    v.osc.frequency.setTargetAtTime(b, aX.currentTime, t);
     v.lfoG.gain.setTargetAtTime((mods.wind||mods.ebow)?150:0,aX.currentTime,.05);
     v.last=a;
-    if(mods.vin) vinN.frequency.setValueAtTime(600 + Math.sin(aX.currentTime*8)*1500, aX.currentTime);
-    if(mods.wah && id && holdTime[id]){
-        let el = (Date.now() - holdTime[id])/1000;
-        fN.frequency.setValueAtTime(Math.min(20000, 200 + el*4000), aX.currentTime);
-        fN.Q.setValueAtTime(1 + el*20, aX.currentTime);
-    }
-    if(mods.ghst && !v.isG){
-        if(!v.sh){v.sh=aX.createOscillator();v.shG=aX.createGain();v.sh.connect(v.shG);v.shG.connect(bitN);v.sh.start();}
-        v.sh.frequency.setTargetAtTime(b*0.96, aX.currentTime, 0.1);
-        v.shG.gain.setValueAtTime(0.5, aX.currentTime);
-        v.shG.gain.exponentialRampToValueAtTime(0.001, aX.currentTime+1.5);
-    }
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
 
@@ -201,28 +188,23 @@ for(let i=0;i<e.touches.length;i++){
 }}
 
 canvas.addEventListener('touchstart',e=>{e.preventDefault();hI(e)},{passive:0});canvas.addEventListener('touchmove',e=>{e.preventDefault();hI(e)},{passive:0});
-canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq'){vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,.1);delete holdTime[id]}}if(!e.touches.length){lt=0;freqs=[440,440]}});
+canvas.addEventListener('touchend',e=>{for(let id in vcs){let s=0;for(let j=0;j<e.touches.length;j++)if(e.touches[j].identifier==id)s=1;if(!s&&id!=='seq'){vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,.1);delete holdTime[id];if(vcs[id].doomG)vcs[id].doomG.gain.setValueAtTime(0,aX.currentTime)}}if(!e.touches.length){lt=0;freqs=[440,440]}});
 
-function setChip(m,e){if(e)e.stopPropagation();setupEngine();currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));if(e.target)e.target.classList.add('active');gl.uniform1i(uL.chip, m==='Z80'?1:0);forceAll()}
+function setChip(m,e){if(e)e.stopPropagation();setupEngine();currentChip=m;document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active'));if(e.target)e.target.classList.add('active');
+let cI=0; if(m==='NES')cI=1; if(m==='SPC')cI=2; gl.uniform1i(uL.chip, cI); forceAll()}
 function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active'));document.getElementById('bank'+i).classList.add('active');rB()}
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
-
-function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';if(m==='ghst')id='btnGhst';if(m==='broke')id='btnBroke';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);
-if(m==='broke'){brkG.gain.setTargetAtTime(mods.broke?1.1:0.7, aX.currentTime, 0.1); dN.delayTime.setTargetAtTime(mods.broke?0.2:0.08, aX.currentTime, 0.1);}
-if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?200:20000,aX.currentTime,.1);
-gl.uniform4f(uL.mods, mods.bit?1:0, mods.gran?1:0, mods.broke?1:0, mods.wah?1:0);
-forceAll()}
-
+function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let el=document.getElementById('btn'+m.charAt(0).toUpperCase()+m.slice(1));if(m==='theremin')el=document.getElementById('btnTherm');if(m==='ghst')el=document.getElementById('btnGhst');if(el)el.classList.toggle('active',mods[m]);
+gl.uniform4f(uL.m, mods.bit?1:0, mods.gran?1:0, mods.doom?1:0, mods.rots?1:0); forceAll()}
 function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
 function toggleAllPlay(e){if(e)e.stopPropagation();seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
 function toggleFae(e){if(e)e.stopPropagation();mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);document.getElementById('btnFae').classList.toggle('active',mods.fae);forceAll();rB()}
-function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t = (mods.gran||mods.broke)?dN:(mods.rock?rockN:(mods.bit?bitN:(mods.sat?sN:fN)));if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
+function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t = (mods.gran)?dN:(mods.rock?rockN:(mods.bit?bitN:(mods.sat?sN:fN)));if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
 
 setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
 if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain(),sq:1};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].lfo.connect(vcs['seq'].lfoG);vcs['seq'].lfoG.connect(vcs['seq'].osc.frequency);vcs['seq'].lfo.start();vcs['seq'].osc.start()}setF(vcs['seq'],d.a,null,1);sync(vcs['seq']);vcs['seq'].gain.gain.setTargetAtTime(0.5,aX.currentTime,.02);updateHUD(vcs['seq'].osc.frequency.value, d.c); ab.style.background=d.c; freqs[0]=vcs['seq'].osc.frequency.value;}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
 seq.step++;if(seq.step>=64){seq.step=0;if(seq.all&&seq.play){seq.bank=(seq.bank+1)%4;setBank(seq.bank)}}},125);
-
 function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform1i(uL.f,mods.fae);gl.uniform1i(uL.a,seq.play||lt);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.uniform1f(uL.f1,freqs[0]);gl.uniform1f(uL.f2,freqs[1]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
 requestAnimationFrame(render);
 </script>
