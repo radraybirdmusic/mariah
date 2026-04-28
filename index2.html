@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><title>MARIAH v3.11 - GRAVEYARD SHIFT</title>
+<style>
+body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
+body.fae-active{background:#fff!important;color:#000!important}
+canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
+#hud{display:flex;justify-content:space-between;padding:0 20px;width:calc(100% - 40px);font-size:5vw;font-weight:900;margin-top:60px;height:60px;pointer-events:none}
+.neon-glow{text-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);}
+#chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;pointer-events:auto;flex-wrap:wrap;max-width:98%;}
+.btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:6px 2px;font-size:9px;min-width:52px;border-radius:4px;cursor:pointer;pointer-events:auto}
+.btn.chip.active{background:#0cf!important;color:#000!important}
+#bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
+.btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:8px 14px;border-radius:4px;cursor:pointer;pointer-events:auto}
+.btn.bank.active{background:#fff!important;color:#000!important}
+#bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
+.bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808;}
+.bucket.playhead{border:3px solid #f0f !important;box-shadow:0 0 15px #f0f;z-index:10;}
+#controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
+.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
+.btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;cursor:pointer;pointer-events:auto;touch-action:manipulation;z-index:10001;position:relative;}
+.btn.active{background:#0f0!important;color:#000!important;box-shadow: 0 0 15px #0f0;}
+.btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
+</style>
+</head>
+<body>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.11<br>GRAVEYARD SHIFT<br>TAP TO START</div>
+<canvas id="vortexCanvas"></canvas>
+<div id="ui-layer">
+    <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
+    <div id="chip-row">
+        <button id="btnUser" class="btn chip active" onpointerdown="setChip('USER', event)">USER</button>
+        <button id="btnNes" class="btn chip" onpointerdown="setChip('NES', event)">NES</button>
+        <button id="btnSfc" class="btn chip" onpointerdown="setChip('SFC', event)">SFC</button>
+        <button id="btnPaula" class="btn chip" onpointerdown="setChip('PAULA', event)">PAULA</button>
+        <button id="btnSid" class="btn chip" onpointerdown="setChip('SID', event)">SID</button>
+        <button id="btnZ80" class="btn chip" onpointerdown="setChip('Z80', event)">Z80</button>
+    </div>
+    <div id="bank-row">
+        <button id="bank0" class="btn bank active" onpointerdown="setBank(0, event)">P1</button>
+        <button id="bank1" class="btn bank" onpointerdown="setBank(1, event)">P2</button>
+        <button id="bank2" class="btn bank" onpointerdown="setBank(2, event)">P3</button>
+        <button id="bank3" class="btn bank" onpointerdown="setBank(3, event)">P4</button>
+        <button id="btnAllPlay" class="btn bank" style="border-color:#f0f;color:#f0f" onpointerdown="toggleAllPlay(event)">ALL</button>
+    </div>
+    <div id="bucket-grid"></div>
+    <div id="controls">
+        <button class="btn kill" onpointerdown="window.location.reload()">!! NUCLEAR RESET !!</button>
+        <div class="row">
+            <button id="btnWhir" class="btn active" onpointerdown="toggleMod('whir', event)">WHIR</button>
+            <button id="btnRots" class="btn" onpointerdown="toggleMod('rots', event)">ROTS</button>
+            <button id="btnFrac" class="btn" onpointerdown="toggleMod('frac', event)">FRAC</button>
+            <button id="btnGhst" class="btn" onpointerdown="toggleMod('ghst', event)">GHOST</button>
+        </div>
+        <div class="row">
+            <button id="btnSat" class="btn" onpointerdown="toggleMod('sat', event)">SAT</button>
+            <button id="btnGran" class="btn" onpointerdown="toggleMod('gran', event)">GRAN</button>
+            <button id="btnBroke" class="btn" style="border-color:#f00;color:#f00" onpointerdown="toggleMod('broke', event)">BROKE</button>
+            <button id="btnBit" class="btn" onpointerdown="toggleMod('bit', event)">BIT</button>
+            <button id="btnRock" class="btn" onpointerdown="toggleMod('rock', event)">ROCK</button>
+        </div>
+        <div class="row">
+            <button id="btnWind" class="btn" onpointerdown="toggleMod('wind', event)">WIND</button>
+            <button id="btnRing" class="btn" onpointerdown="toggleMod('ring', event)">RAIN</button>
+            <button id="btnVin" class="btn" style="color:#0ff;border-color:#0ff" onpointerdown="toggleMod('vin', event)">VIN</button>
+            <button id="btnSpring" class="btn" onpointerdown="toggleMod('spring', event)">SPR</button>
+            <button id="btnDoom" class="btn" style="border-color:#f00;color:#f00" onpointerdown="toggleMod('doom', event)">DOOM</button>
+        </div>
+        <div class="row">
+            <button id="btnEbow" class="btn" onpointerdown="toggleMod('ebow', event)">EBOW</button>
+            <button id="btnTherm" class="btn" onpointerdown="toggleMod('theremin', event)">THERM</button>
+            <button id="btnRec" class="btn" style="border-color:#f00;color:#f00" onpointerdown="toggleSeq('rec', event)">REC</button>
+            <button id="btnPlay" class="btn" onpointerdown="toggleSeq('play', event)">PLAY</button>
+            <button id="btnStop" class="btn" style="border-color:#fff;color:#fff" onpointerdown="stopAll(event)">STOP</button>
+            <button id="btnFae" class="btn" onpointerdown="toggleFae(event)">FAE</button>
+        </div>
+        <div class="row">
+            <button class="btn ham" onpointerdown="shiftOct(0.75, event)">HAM DOWN</button>
+            <div style="width:82px"></div>
+            <button class="btn ham" onpointerdown="shiftOct(1.33, event)">HAM UP</button>
+        </div>
+    </div>
+</div>
+<script>
+const canvas=document.getElementById('vortexCanvas'),gl=canvas.getContext('webgl'),hud=document.getElementById('hud'),n_hud=document.getElementById('note-name'),hz_hud=document.getElementById('hz-val'),hx_hud=document.getElementById('hex-val');
+for(let i=0;i<64;i++){let b=document.createElement('div');b.className='bucket';b.id='bucket-'+i;document.getElementById('bucket-grid').appendChild(b)}
+const vs=`attribute vec4 a_p;void main(){gl_Position=a_p;}`,fs=`precision mediump float;
+uniform float u_t;uniform vec2 u_r;uniform int u_f;uniform int u_a;uniform vec3 u_c;
+uniform vec4 u_m1;uniform vec4 u_m2;uniform vec4 u_m3;uniform vec4 u_m4;uniform float u_f1;
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+    if(u_a==0){gl_FragColor=vec4(u_f==1?1.:0.,u_f==1?1.:0.02,0.,1.);return;}
+    vec2 p = uv - 0.5;
+    if(u_f == 1) p.x = -p.x;
+    float s = sin(uv.y * (15.0 + u_f1*0.002) + u_t * 5.0);
+    if(u_m3.x>0.5) s += (fract(uv.x*10.0 + u_t*5.0)-0.5)*0.2; // WIND
+    if(u_m3.y>0.5) s *= step(0.9, fract(uv.y*20.0 + u_t*10.0)); // RAIN
+    if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*60.0 + u_t*15.0))-0.5)*0.6; // VIN
+    if(u_m3.w>0.5) s = mix(s, sin(u_t*80.0 + uv.y*100.0), 0.5); // SPRING
+    if(u_m4.w>0.5) s = tan(uv.y*2.0 + s*5.0 + u_t); // DOOM PITCHFORK
+    float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
+    vec3 col = u_f==1?(1.0-u_c):u_c;
+    if(u_m4.w>0.5) col = vec3(0.3, 0.0, 0.0); // DOOM RED
+    gl_FragColor = vec4(col*l, 1.0);
+    if(u_f==1) gl_FragColor = vec4(1.0-(1.0-col)*l, 1.0);
+}`;
+const prg=gl.createProgram();
+function cS(g,t,s){let x=g.createShader(t);g.shaderSource(x,s);g.compileShader(x);return x}
+gl.attachShader(prg,cS(gl,gl.VERTEX_SHADER,vs));gl.attachShader(prg,cS(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(prg);gl.useProgram(prg);
+const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),f:gl.getUniformLocation(prg,"u_f"),a:gl.getUniformLocation(prg,"u_a"),c:gl.getUniformLocation(prg,"u_c"),m1:gl.getUniformLocation(prg,"u_m1"),m2:gl.getUniformLocation(prg,"u_m2"),m3:gl.getUniformLocation(prg,"u_m3"),m4:gl.getUniformLocation(prg,"u_m4"),f1:gl.getUniformLocation(prg,"u_f1")};
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
+
+let aX,mG,dN,rockG,satG,doomG,vcs={},mods={whir:1,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0;
+
+function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
+rockG=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++)rC[i]=Math.sign(i/22050-1)*0.9;rockG.curve=rC;rockG.connect(mG);
+satG=aX.createWaveShaper();let sC=new Float32Array(44100);for(let i=0;i<44100;i++)sC[i]=Math.tanh((i/22050-1)*10);satG.curve=sC;satG.connect(mG);
+doomG=aX.createWaveShaper();let dC=new Float32Array(44100);for(let i=0;i<44100;i++)dC[i]=Math.sign(i/22050-1);doomG.curve=dC;doomG.connect(mG);
+dN=aX.createDelay(1.);dN.delayTime.value=0.15;let dFB=aX.createGain();dFB.gain.value=0.6;dN.connect(dFB);dFB.connect(dN);dN.connect(mG);document.getElementById('overlay').style.display='none'}
+
+function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
+function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
+function updateHUD(f,c){let h=rgbToHex(c);n_hud.innerText=getNoteName(f);hz_hud.innerText=`${Math.round(f)}Hz`;hx_hud.innerText=h;
+let textColor = mods.fae ? '#000' : h;
+n_hud.style.color=hz_hud.style.color=hx_hud.style.color=textColor;
+hud.style.setProperty('--glow',h)}
+
+function setF(v,a){
+    let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
+    if(mods.whir) b+=Math.sin(aX.currentTime*20)*400;
+    if(mods.rots) b *= (0.7 + Math.random()*0.6);
+    if(mods.frac) b += (Math.random()-0.5)*5000;
+    if(mods.ghst){ let n = Object.keys(vcs).length; b *= (1.0 + Math.sin(aX.currentTime*(15 + n*5))* (0.4 + n*0.2));}
+    if(mods.vin) b += (Math.sin(aX.currentTime * 45) * 400 * Math.sin(aX.currentTime * 7));
+    if(mods.spring) b += Math.sin(aX.currentTime*80)*800;
+    if(mods.doom){ if(!v.d1){v.d1=aX.createOscillator();v.d2=aX.createOscillator();v.d1.connect(v.gain);v.d2.connect(v.gain);v.d1.start();v.d2.start()} v.d1.frequency.value=b*0.5;v.d2.frequency.value=b*1.5; b *= (1.0 - Math.min(1.0, aX.currentTime % 2.0)*0.5);}
+    v.osc.frequency.setTargetAtTime(b, aX.currentTime, 0.02);
+    let h=(a/360)*285/360;if(mods.fae)h=285-h;let c=hR(h,1,.5);rgb=c;updateHUD(b,c);
+    gl.uniform1f(uL.f1, b); gl.uniform1i(uL.a, 1);
+    return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
+
+function hR(h,s,l){let q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)]}
+
+function syncVoice(v){ if(v && v.gain){
+    v.gain.disconnect(); 
+    let d = mods.doom?doomG:(mods.rock?rockG:(mods.sat?satG:mG));
+    if(mods.wind){if(!v.n){v.n=aX.createBufferSource();let b=aX.createBuffer(1,44100,44100),dat=b.getChannelData(0);for(let i=0;i<44100;i++)dat[i]=Math.random()*2-1;v.n.buffer=b;v.n.loop=1;v.nG=aX.createGain();v.nG.gain.value=0.2;v.n.connect(v.nG);v.nG.connect(d);v.n.start()}}
+    v.gain.connect(d); if(mods.broke) v.gain.connect(dN);
+}}
+
+canvas.onpointerdown=e=>{ if(e.target!==canvas)return; setupEngine(); let id=e.pointerId,ang=(e.clientX/window.innerWidth)*360; if(!vcs[id]){vcs[id]={osc:aX.createOscillator(),gain:aX.createGain(),lastAng:ang};vcs[id].osc.connect(vcs[id].gain);vcs[id].osc.start()} vcs[id].lastAng=ang; syncVoice(vcs[id]); setF(vcs[id],ang); vcs[id].gain.gain.setTargetAtTime(0.7,aX.currentTime,0.05); };
+canvas.onpointermove=e=>{ let id=e.pointerId; if(vcs[id]){ let ang=(e.clientX/window.innerWidth)*360; vcs[id].lastAng=ang; setF(vcs[id],ang); } };
+canvas.onpointerup=canvas.onpointercancel=e=>{ let id=e.pointerId; if(vcs[id]){ vcs[id].gain.gain.setTargetAtTime(0,aX.currentTime,0.1); if(vcs[id].n)vcs[id].n.stop(); if(vcs[id].d1){vcs[id].d1.stop();vcs[id].d2.stop()} delete vcs[id]; } if(Object.keys(vcs).length===0)gl.uniform1i(uL.a,0); };
+
+function toggleMod(m,e){e.preventDefault(); mods[m]=!mods[m]; e.target.classList.toggle('active',mods[m]);
+gl.uniform4f(uL.m1, mods.whir?1:0, mods.rots?1:0, mods.frac?1:0, mods.ghst?1:0);
+gl.uniform4f(uL.m2, mods.sat?1:0, mods.gran?1:0, mods.broke?1:0, mods.bit?1:0);
+gl.uniform4f(uL.m3, mods.wind?1:0, mods.ring?1:0, mods.vin?1:0, mods.spring?1:0);
+gl.uniform4f(uL.m4, mods.rock?1:0, mods.ebow?1:0, mods.theremin?1:0, mods.doom?1:0);
+for(let id in vcs) { syncVoice(vcs[id]); setF(vcs[id], vcs[id].lastAng); }}
+
+function stopAll(e){e.preventDefault(); vcs={}; document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'))}
+function toggleFae(e){e.preventDefault(); mods.fae=!mods.fae; document.body.classList.toggle('fae-active',mods.fae); e.target.classList.toggle('active'); gl.uniform1i(uL.f, mods.fae); for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
+function shiftOct(m,e){e.preventDefault(); oct*=m; for(let id in vcs) setF(vcs[id], vcs[id].lastAng);}
+function setChip(m,e){e.preventDefault(); currentChip=m; document.querySelectorAll('.btn.chip').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
+function setBank(i,e){e.preventDefault(); seq.bank=i; document.querySelectorAll('.btn.bank').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');}
+
+function render(t){gl.viewport(0,0,canvas.width=window.innerWidth,canvas.height=window.innerHeight);gl.uniform1f(uL.t,t*.001);gl.uniform2f(uL.r,canvas.width,canvas.height);gl.uniform3f(uL.c,rgb[0],rgb[1],rgb[2]);gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(render)}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
+
