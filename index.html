@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.96 - ROW 3 RESTORE</title>
+<meta charset="UTF-8"><title>MARIAH v3.04 - VERBATIM SURGERY</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
 canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
-#hud{text-align:center;width:100%;font-size:5vw;font-weight:900;margin-top:60px;height:60px;transition:0.05s;white-space:nowrap;pointer-events:none}
+/* REVISION 1: HUD ALIGNMENT (LEFT, MIDDLE, RIGHT) */
+#hud{display:flex;justify-content:space-between;padding:0 20px;width:calc(100% - 40px);font-size:5vw;font-weight:900;margin-top:60px;height:60px;transition:0.05s;white-space:nowrap;pointer-events:none}
 .neon-glow{text-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);}
 #chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;pointer-events:auto;flex-wrap:wrap;max-width:98%;}
 .btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:6px 2px;font-size:9px;min-width:52px;border-radius:4px;cursor:pointer;pointer-events:auto}
@@ -28,10 +29,10 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.96<br>ROW 3 & RECOIL FIX<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v3.04<br>RADIOACTIVE ROCKS<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
-    <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
+    <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span><span id="hz-val">0Hz</span><span id="hex-val">#000000</span></div>
     <div id="chip-row">
         <button id="btnUser" class="btn chip active" onpointerdown="setChip('USER', event)">USER</button>
         <button id="btnNes" class="btn chip" onpointerdown="setChip('NES', event)">NES</button>
@@ -102,7 +103,7 @@ void main(){
     if(u_m2.z>0.5) s = tan(s*1.5 + sin(u_t*5.0)); // BROKE VISUAL
     if(u_m3.x>0.5) s += (sin(uv.x*50.0 + u_t*20.0)*0.1); // WIND VISUAL
     if(u_m3.y>0.5) s *= sin(uv.y*100.0); // RING VISUAL
-    if(u_m3.z>0.5) s += (sin(uv.y*5.0 + u_t)*0.1); // VIN VISUAL
+    if(u_m3.z>0.5) s += (step(0.8, fract(uv.y*50.0 + u_t*10.0))-0.5)*0.6; // VIN REVISED
     if(u_m3.w>0.5) s = mix(s, sin(u_t*50.0)*0.5, 0.5); // SPR VISUAL
     if(u_m4.w>0.5) s = sign(s)*0.8; // DOOM VISUAL
     float l = smoothstep(0.15, 0.0, abs(p.x + s*0.2));
@@ -134,7 +135,8 @@ function setF(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
     if(mods.whir) b+=Math.sin(aX.currentTime*20)*300;
     if(mods.spring) b+=Math.sin(aX.currentTime*60)*600;
-    if(mods.vin) b *= (1.0 + Math.sin(aX.currentTime*4)*0.02);
+    /* REVISION 2: VIN RADIOACTIVE SWISHING ROCKS MOD */
+    if(mods.vin) b += (Math.sin(aX.currentTime * 45) * 400 * Math.sin(aX.currentTime * 7));
     if(mods.ring) { if(!v.rO){v.rO=aX.createOscillator();v.rG=aX.createGain();v.rO.frequency.value=b*2.5;v.rO.connect(v.rG.gain);v.rO.start()} }
     v.osc.type=(currentChip==='NES')?'square':(currentChip==='SFC'?'sine':(mods.theremin?'sine':'sawtooth'));
     let freq = b; if(mods.doom) freq *= 0.5;
@@ -175,4 +177,3 @@ requestAnimationFrame(render);
 </script>
 </body>
 </html>
-
