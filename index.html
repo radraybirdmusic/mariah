@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.61 - SICK SIX</title>
+<meta charset="UTF-8"><title>MARIAH v2.62 - METAL CUBE</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
 canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;top:0;left:0;z-index:1}
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
-
 #hud{text-align:center;width:100%;font-size:5vw;font-weight:900;margin-top:60px;height:60px;transition:0.05s;white-space:nowrap;}
 .neon-glow{text-shadow: 0 0 15px var(--glow), 0 0 30px var(--glow);}
-
 #chip-row{display:flex;gap:4px;justify-content:center;margin-top:5px;pointer-events:auto}
 #bank-row{display:flex;gap:8px;justify-content:center;margin-top:8px;pointer-events:auto}
 .btn.chip{background:#000;border:1.5px solid #0cf;color:#0cf;padding:8px 2px;font-size:10px;min-width:50px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.chip.active{background:#0cf!important;color:#000!important}
 .btn.bank{background:#000;border:2px solid #fff;color:#fff;padding:8px 14px;border-radius:4px;cursor:pointer;pointer-events:auto}
 .btn.bank.active{background:#fff!important;color:#000!important}
-
 #bucket-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;width:96%;max-width:800px;margin:10px auto 0 auto;pointer-events:auto}
 .bucket{aspect-ratio:1/1;border:1px solid #222;border-radius:50%;background:#080808;transition:0.1s;}
 .bucket.playhead{border:3px solid #f0f !important;box-shadow:0 0 15px #f0f;z-index:10;}
-
 #controls{position:fixed;bottom:0;left:0;width:100%;padding-bottom:10px;pointer-events:auto;display:flex;flex-direction:column-reverse;gap:6px;align-items:center;z-index:9999;background:rgba(0,0,0,0.85)}
 .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;pointer-events:auto}
 .btn{background:#000;border:2px solid #0f0;color:#0f0;padding:12px 6px;text-transform:uppercase;font-weight:900;font-size:13px;border-radius:8px;min-width:82px;touch-action:none;cursor:pointer;pointer-events:auto}
@@ -30,14 +26,14 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 .btn.broke{border-color:#f00;color:#f00}.btn.broke.active{background:#f00!important;color:#fff!important;animation:pulse 0.1s infinite;}
 .btn.vin{border-color:#0ff;color:#0ff}
 .btn.ham{border-color:#fff;color:#fff;min-width:120px}
-.spacer{width:82px;} /* Gap for two-handed hammer play */
+.spacer{width:82px;}
 .btn.kill{border-color:#fff;color:#fff;background:#600;width:95%;font-size:16px;padding:10px;margin-bottom:5px}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;font-size:22px;color:#0f0;z-index:1000000;cursor:pointer;text-align:center;pointer-events:auto}
 @keyframes pulse{0%{opacity:1}50%{opacity:0.2}100%{opacity:1}}
 </style>
 </head>
 <body>
-<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.61<br>SICK SIX & SWISH<br>TAP TO INITIALIZE</div>
+<div id="overlay" ontouchstart="setupEngine(event)">MARIAH v2.62<br>METAL CUBE & LEMON DEMON<br>TAP TO INITIALIZE</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0">READY</div>
@@ -87,9 +83,9 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
             <button id="btnFae" class="btn" ontouchstart="toggleFae(event)">FAE</button>
         </div>
         <div class="row">
-            <button id="btnHamDown" class="btn ham" ontouchstart="shiftOct(0.5, event)">HAM DOWN</button>
+            <button id="btnHamDown" class="btn ham" ontouchstart="shiftOct(0.75, event)">HAM DOWN</button>
             <div class="spacer"></div>
-            <button id="btnHamUp" class="btn ham" ontouchstart="shiftOct(2.0, event)">HAM UP</button>
+            <button id="btnHamUp" class="btn ham" ontouchstart="shiftOct(1.33, event)">HAM UP</button>
         </div>
     </div>
 </div>
@@ -103,7 +99,7 @@ const uL={t:gl.getUniformLocation(prg,"u_t"),r:gl.getUniformLocation(prg,"u_r"),
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
 const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,0,0,0);
 
-let aX,mG,fN,sN,dN,vinN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
+let aX,mG,fN,sN,dN,brkG,vinN,rG,rO,bitN,rockN,vcs={},mods={wind:0,spring:0,ring:0,fae:0,sat:0,gran:0,wah:0,bit:0,ebow:0,whir:1,rots:0,frac:0,ghst:0,theremin:0,rock:0,broke:0,vin:0};
 let currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,holdTime={};
 
 function setupEngine(e){if(e)e.stopPropagation();if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);
@@ -112,13 +108,14 @@ rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 vinN=aX.createBiquadFilter();vinN.type='bandpass';vinN.frequency.value=1000;vinN.Q.value=15;vinN.connect(sN);
 bitN=aX.createGain();bitN.connect(vinN);
-dN=aX.createDelay(1.);dN.delayTime.value=0.25;let fb=aX.createGain();fb.gain.value=0.8;dN.connect(fb);fb.connect(dN);dN.connect(bitN);
+dN=aX.createDelay(1.);dN.delayTime.value=0.05;let dFB=aX.createGain();dFB.gain.value=0.66;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
+brkG=aX.createGain();brkG.gain.value=0;let bFB=aX.createGain();bFB.gain.value=1.8;dN.connect(bFB);bFB.connect(dN);
 rO=aX.createOscillator();rG=aX.createGain();rO.type='sine';rO.frequency.value=60;rO.connect(rG.gain);rO.start();
 document.getElementById('overlay').style.display='none'}
 
 function getNoteName(f){const ns=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];let n=Math.round(12*Math.log2(f/440)+69);return ns[n%12]+Math.floor(n/12-1)}
 function rgbToHex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,'0');return `#${f(c[0])}${f(c[1])}${f(c[2])}`.toUpperCase()}
-function updateHUD(f,c){if(mods.broke){hud.innerText="SYSTEM BROKE";hud.style.color="#f00";hud.style.setProperty('--glow','#f00');return;}let h=rgbToHex(c);hud.innerText=`${getNoteName(f)} | ${Math.round(f)}Hz | ${h}`;hud.style.color=h;hud.style.setProperty('--glow',h)}
+function updateHUD(f,c){if(mods.broke){hud.innerText="LEMON DEMON ACTIVE";hud.style.color="#f00";hud.style.setProperty('--glow','#f00');return;}let h=rgbToHex(c);hud.innerText=`${getNoteName(f)} | ${Math.round(f)}Hz | ${h}`;hud.style.color=h;hud.style.setProperty('--glow',h)}
 
 function calcFreq(v,a){
     let b=(mods.fae?(2000-(a/360)*1960):(40+(a/360)*760))*oct;
@@ -126,21 +123,21 @@ function calcFreq(v,a){
     if(mods.whir) b += Math.sin(aX.currentTime*18)*180;
     if(mods.rots) b *= (1.0 + Math.sin(aX.currentTime*12)*0.6);
     if(mods.frac) b += (Math.random()-0.5)*500;
-    if(currentChip==='Z80') b = Math.round(b / 25) * 25;
+    if(currentChip==='Z80') b = Math.floor(b/32)*32;
     return b;
 }
 
 function setF(v,a,id){
     let b=calcFreq(v,a);
-    v.osc.type=currentChip==='Z80'?'square':(mods.theremin?'sine':(mods.fae?'triangle':'sawtooth'));
+    v.osc.type=(currentChip==='Z80' || currentChip==='NES')?'square':(mods.theremin?'sine':(mods.fae?'triangle':'sawtooth'));
     v.osc.frequency.setValueAtTime(b,aX.currentTime);
     v.lfoG.gain.setTargetAtTime(mods.wind?90:0,aX.currentTime,.05);
     v.last=a;
     if(mods.vin) vinN.frequency.setValueAtTime(1000 + Math.sin(aX.currentTime*5)*800, aX.currentTime);
     if(mods.wah && id && holdTime[id]){
-        let elapsed = (Date.now() - holdTime[id])/1000;
-        fN.frequency.setValueAtTime(Math.min(20000, 400 + elapsed*2000), aX.currentTime);
-        fN.Q.setValueAtTime(1 + elapsed*5, aX.currentTime);
+        let el = (Date.now() - holdTime[id])/1000;
+        fN.frequency.setValueAtTime(Math.min(20000, 400 + el*2000), aX.currentTime);
+        fN.Q.setValueAtTime(1 + el*10, aX.currentTime);
     }
     let h=(a/360)*285;if(mods.fae)h=285-h;let c=hR(h/360,1,.5);if(!v.sq){rgb=c;updateHUD(b,c)}
     return `rgb(${c[0]*255},${c[1]*255},${c[2]*255})`}
@@ -162,14 +159,13 @@ function setBank(i,e){if(e)e.stopPropagation();seq.bank=i;document.querySelector
 function rB(){document.querySelectorAll('.bucket').forEach(b=>b.style.background='');seq.banks[seq.bank].forEach((d,i)=>{if(d)document.getElementById('bucket-'+i).style.background=d.c})}
 
 function toggleMod(m,e){if(e)e.stopPropagation();setupEngine();mods[m]=!mods[m];let id='btn'+m.charAt(0).toUpperCase()+m.slice(1);if(m==='theremin')id='btnTherm';if(m==='ghst')id='btnGhst';if(m==='broke')id='btnBroke';let el=document.getElementById(id);if(el)el.classList.toggle('active',mods[m]);
-if(m==='broke'){let bFB=aX.createGain();bFB.gain.value=1.8;dN.connect(bFB);bFB.connect(dN);forceAll();}
 if(m==='wah')fN.frequency.setTargetAtTime(mods.wah?400:20000,aX.currentTime,.1);forceAll()}
 
-function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.querySelectorAll('.btn.active').forEach(b=>b.classList.remove('active'))}
+function stopAll(e){if(e)e.stopPropagation();seq.play=seq.rec=0;seq.step=0;if(vcs['seq']){vcs['seq'].osc.stop();delete vcs['seq']}document.getElementById('btnPlay').classList.remove('active');document.getElementById('btnRec').classList.remove('active')}
 function toggleSeq(m,e){if(e)e.stopPropagation();setupEngine();if(m==='rec'){seq.rec=!seq.rec;if(seq.rec)seq.step=0}if(m==='play')seq.play=!seq.play;document.getElementById('btnRec').classList.toggle('active',seq.rec);document.getElementById('btnPlay').classList.toggle('active',seq.play)}
 function toggleAllPlay(e){if(e)e.stopPropagation();seq.all=!seq.all;document.getElementById('btnAllPlay').classList.toggle('active',seq.all)}
 function toggleFae(e){if(e)e.stopPropagation();mods.fae=!mods.fae;document.body.classList.toggle('fae-active',mods.fae);document.getElementById('btnFae').classList.toggle('active',mods.fae);forceAll();rB()}
-function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t = mods.gran?dN:(mods.rock?rockN:(mods.bit?bitN:(mods.sat?sN:fN)));if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
+function sync(v){if(!v||!v.gain)return;v.gain.disconnect();let t = (mods.gran||mods.broke)?dN:(mods.rock?rockN:(mods.bit?bitN:(mods.sat?sN:fN)));if(mods.ring){v.gain.connect(rG);rG.connect(t)}else{v.gain.connect(t)}}
 
 setInterval(()=>{if(!aX)return;document.querySelectorAll('.bucket').forEach(b=>b.classList.remove('playhead'));let ab=document.getElementById('bucket-'+seq.step);if(ab)ab.classList.add('playhead');
 if(seq.play){let d=seq.banks[seq.bank][seq.step];if(d){if(!vcs['seq']){vcs['seq']={osc:aX.createOscillator(),gain:aX.createGain(),lfo:aX.createOscillator(),lfoG:aX.createGain(),sq:1};vcs['seq'].osc.connect(vcs['seq'].gain);vcs['seq'].lfo.connect(vcs['seq'].lfoG);vcs['seq'].lfoG.connect(vcs['seq'].osc.frequency);vcs['seq'].lfo.start();vcs['seq'].osc.start()}setF(vcs['seq'],d.a,null);sync(vcs['seq']);vcs['seq'].gain.gain.setTargetAtTime(0.4,aX.currentTime,.02);updateHUD(vcs['seq'].osc.frequency.value, d.c); ab.style.background=d.c;}else if(vcs['seq'])vcs['seq'].gain.gain.setTargetAtTime(0,aX.currentTime,.05)}
