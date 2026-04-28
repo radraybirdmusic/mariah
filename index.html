@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><title>MARIAH v2.78 - TOUCHDOWN FIXED</title>
+<meta charset="UTF-8"><title>MARIAH v2.80 - STABLE</title>
 <style>
 body{margin:0;background:#000;overflow:hidden;font-family:monospace;color:#0f0;transition:background 0.1s}
 body.fae-active{background:#fff!important;color:#000!important}
@@ -30,7 +30,7 @@ canvas{width:100vw;height:100vh;display:block;touch-action:none;position:fixed;t
 </style>
 </head>
 <body>
-<div id="overlay" onclick="setupEngine()">MARIAH v2.78<br>HARDWARE LOCK REPAIRED<br>TAP TO START</div>
+<div id="overlay" onclick="setupEngine()">MARIAH v2.80<br>SYSTEM STABLE<br>TAP TO START</div>
 <canvas id="vortexCanvas"></canvas>
 <div id="ui-layer">
     <div id="hud" class="neon-glow" style="--glow: #0f0"><span id="note-name">READY</span> | <span class="hz-pop" id="hz-val">0Hz</span> | <span id="hex-val">#000000</span></div>
@@ -125,7 +125,7 @@ const pL=gl.getAttribLocation(prg,"a_p");gl.enableVertexAttribArray(pL);gl.verte
 
 let aX,mG,fN,sN,dN,bitN,rockN,vcs={},mods={whir:0,rots:0,frac:0,ghst:0,sat:0,gran:0,broke:0,bit:0,rock:0,wind:0,ring:0,vin:0,spring:0,ebow:0,theremin:0,doom:0,fae:0},currentChip='USER',seq={rec:0,play:0,step:0,bank:0,all:0,banks:Array.from({length:4},()=>new Array(64).fill(null))},rgb=[0,1,0.5],lt=0,oct=1.0,rotFly=0;
 
-function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.connect(mG);
+function setupEngine(){if(aX)return;aX=new AudioContext();mG=aX.createGain();mG.connect(aX.destination);fN=aX.createBiquadFilter();fN.type='lowpass';fN.connect(mG);
 rockN=aX.createWaveShaper();let rC=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;rC[i]=(Math.PI+8000)*x/(Math.PI+8000*Math.abs(x))}rockN.curve=rC;rockN.connect(fN);
 sN=aX.createWaveShaper();let c=new Float32Array(44100);for(let i=0;i<44100;i++){let x=i*2/44100-1;c[i]=(Math.PI+1000)*x/(Math.PI+1000*Math.abs(x))}sN.curve=c;sN.connect(rockN);
 bitN=aX.createGain();bitN.connect(sN);dN=aX.createDelay(1.);dN.delayTime.value=0.1;let dFB=aX.createGain();dFB.gain.value=0.5;dN.connect(dFB);dFB.connect(dN);dN.connect(bitN);
